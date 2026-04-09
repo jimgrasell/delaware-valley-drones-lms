@@ -1,0 +1,275 @@
+delaware-valley-drones-lms/
+├── backend/
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── database.ts          # PostgreSQL connection & pooling
+│   │   │   ├── stripe.ts             # Stripe API configuration
+│   │   │   ├── postmark.ts           # Postmark email configuration
+│   │   │   └── vimeo.ts              # Vimeo API configuration
+│   │   ├── middleware/
+│   │   │   ├── auth.ts               # JWT authentication middleware
+│   │   │   ├── rbac.ts               # Role-based access control
+│   │   │   ├── errorHandler.ts       # Global error handling
+│   │   │   ├── requestLogger.ts      # Request logging
+│   │   │   ├── rateLimit.ts          # Rate limiting
+│   │   │   └── cors.ts               # CORS configuration
+│   │   ├── models/
+│   │   │   ├── User.ts               # User model & methods
+│   │   │   ├── Enrollment.ts         # Enrollment model
+│   │   │   ├── Chapter.ts            # Chapter content model
+│   │   │   ├── Quiz.ts               # Quiz model
+│   │   │   ├── Question.ts           # Question model
+│   │   │   ├── QuizAttempt.ts        # Quiz attempt tracking
+│   │   │   ├── ChapterProgress.ts    # Student progress per chapter
+│   │   │   ├── Payment.ts            # Payment records
+│   │   │   ├── Coupon.ts             # Coupon codes
+│   │   │   ├── Announcement.ts       # Course announcements
+│   │   │   ├── ForumPost.ts          # Discussion forum posts
+│   │   │   ├── ForumReply.ts         # Forum post replies
+│   │   │   └── Certificate.ts        # Certificate records
+│   │   ├── routes/
+│   │   │   ├── auth.routes.ts        # /api/v1/auth/*
+│   │   │   ├── students.routes.ts    # /api/v1/students/*
+│   │   │   ├── chapters.routes.ts    # /api/v1/chapters/*
+│   │   │   ├── quizzes.routes.ts     # /api/v1/quizzes/*
+│   │   │   ├── forum.routes.ts       # /api/v1/forum/*
+│   │   │   ├── payments.routes.ts    # /api/v1/payments/*
+│   │   │   ├── admin.routes.ts       # /api/v1/admin/*
+│   │   │   └── public.routes.ts      # /api/v1/public/* (landing page data)
+│   │   ├── controllers/
+│   │   │   ├── authController.ts     # Auth logic (register, login, refresh)
+│   │   │   ├── studentController.ts  # Student dashboard & profile
+│   │   │   ├── chapterController.ts  # Chapter content delivery
+│   │   │   ├── quizController.ts     # Quiz logic & scoring
+│   │   │   ├── forumController.ts    # Forum operations
+│   │   │   ├── paymentController.ts  # Payment & Stripe webhook
+│   │   │   ├── adminController.ts    # Admin panel operations
+│   │   │   └── certificateController.ts # Certificate generation
+│   │   ├── services/
+│   │   │   ├── authService.ts        # JWT, password hashing, OAuth
+│   │   │   ├── emailService.ts       # Postmark transactional emails
+│   │   │   ├── paymentService.ts     # Stripe API integration
+│   │   │   ├── quizService.ts        # Quiz scoring & randomization
+│   │   │   ├── certificateService.ts # PDF generation & validation
+│   │   │   ├── progressService.ts    # Progress tracking & analytics
+│   │   │   ├── vimeoService.ts       # Vimeo API integration
+│   │   │   └── storageService.ts     # S3/Cloudinary file uploads
+│   │   ├── utils/
+│   │   │   ├── validators.ts         # Input validation helpers
+│   │   │   ├── passwordUtils.ts      # Password hashing & validation
+│   │   │   ├── tokenUtils.ts         # JWT creation & verification
+│   │   │   ├── errorCodes.ts         # Standardized error codes
+│   │   │   ├── constants.ts          # App-wide constants
+│   │   │   └── logger.ts             # Logging utility
+│   │   ├── types/
+│   │   │   ├── index.ts              # TypeScript interfaces & types
+│   │   │   ├── user.types.ts         # User-related types
+│   │   │   ├── quiz.types.ts         # Quiz-related types
+│   │   │   └── payment.types.ts      # Payment-related types
+│   │   ├── migrations/
+│   │   │   ├── 001_init_schema.sql   # Initial database schema
+│   │   │   ├── 002_add_indexes.sql   # Performance indexes
+│   │   │   └── [YYYYMMDD]_*.sql      # Future migrations
+│   │   ├── seeds/
+│   │   │   ├── seedChapters.ts       # Load 13 chapters
+│   │   │   ├── seedQuestions.ts      # Load 113+ questions
+│   │   │   └── seedAdmin.ts          # Create test admin user
+│   │   ├── app.ts                    # Express app initialization
+│   │   └── server.ts                 # Server entry point
+│   ├── tests/
+│   │   ├── auth.test.ts
+│   │   ├── quizzes.test.ts
+│   │   ├── payments.test.ts
+│   │   ├── endpoints.test.ts
+│   │   └── integration/
+│   │       ├── stripe.integration.ts
+│   │       ├── email.integration.ts
+│   │       └── vimeo.integration.ts
+│   ├── .env.example                  # Environment template
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── jest.config.js                # Testing configuration
+│   ├── README.md                      # Backend documentation
+│   └── .gitignore
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── Footer.tsx
+│   │   │   │   ├── Navigation.tsx
+│   │   │   │   ├── LoadingSpinner.tsx
+│   │   │   │   └── ErrorBoundary.tsx
+│   │   │   ├── auth/
+│   │   │   │   ├── Register.tsx
+│   │   │   │   ├── Login.tsx
+│   │   │   │   ├── ForgotPassword.tsx
+│   │   │   │   └── ResetPassword.tsx
+│   │   │   ├── landing/
+│   │   │   │   ├── LandingPage.tsx
+│   │   │   │   ├── Hero.tsx
+│   │   │   │   ├── CourseOverview.tsx
+│   │   │   │   ├── Testimonials.tsx
+│   │   │   │   ├── FAQ.tsx
+│   │   │   │   └── PricingSection.tsx
+│   │   │   ├── dashboard/
+│   │   │   │   ├── StudentDashboard.tsx
+│   │   │   │   ├── ProgressBar.tsx
+│   │   │   │   ├── ChapterCard.tsx
+│   │   │   │   ├── StatsPanel.tsx
+│   │   │   │   └── CertificateTracker.tsx
+│   │   │   ├── chapter/
+│   │   │   │   ├── ChapterView.tsx
+│   │   │   │   ├── VideoPlayer.tsx
+│   │   │   │   ├── PDFViewer.tsx
+│   │   │   │   ├── ChapterSummary.tsx
+│   │   │   │   └── NextChapterButton.tsx
+│   │   │   ├── quiz/
+│   │   │   │   ├── QuizInterface.tsx
+│   │   │   │   ├── QuestionCard.tsx
+│   │   │   │   ├── QuizTimer.tsx
+│   │   │   │   ├── QuizFeedback.tsx
+│   │   │   │   └── PracticeExamInterface.tsx
+│   │   │   ├── gradebook/
+│   │   │   │   ├── GradebookPage.tsx
+│   │   │   │   ├── ProgressTable.tsx
+│   │   │   │   └── ScoreBreakdown.tsx
+│   │   │   ├── certificate/
+│   │   │   │   ├── CertificatePage.tsx
+│   │   │   │   └── CertificateViewer.tsx
+│   │   │   ├── forum/
+│   │   │   │   ├── ForumSection.tsx
+│   │   │   │   ├── PostList.tsx
+│   │   │   │   ├── PostDetail.tsx
+│   │   │   │   ├── ReplyForm.tsx
+│   │   │   │   └── ModerationTools.tsx
+│   │   │   ├── checkout/
+│   │   │   │   ├── CheckoutPage.tsx
+│   │   │   │   ├── StripeCheckoutForm.tsx
+│   │   │   │   ├── CouponInput.tsx
+│   │   │   │   └── OrderSummary.tsx
+│   │   │   ├── admin/
+│   │   │   │   ├── AdminDashboard.tsx
+│   │   │   │   ├── StudentRoster.tsx
+│   │   │   │   ├── StudentDetail.tsx
+│   │   │   │   ├── ChapterEditor.tsx
+│   │   │   │   ├── QuizBuilder.tsx
+│   │   │   │   ├── GradebookExport.tsx
+│   │   │   │   ├── AnalyticsDashboard.tsx
+│   │   │   │   ├── PaymentHistory.tsx
+│   │   │   │   ├── CouponManager.tsx
+│   │   │   │   ├── AnnouncementEditor.tsx
+│   │   │   │   └── EmailBroadcast.tsx
+│   │   │   └── pages/
+│   │   │       ├── About.tsx
+│   │   │       ├── Contact.tsx
+│   │   │       ├── PrivacyPolicy.tsx
+│   │   │       ├── TermsOfService.tsx
+│   │   │       ├── RefundPolicy.tsx
+│   │   │       └── SyllabusPage.tsx
+│   │   ├── hooks/
+│   │   │   ├── useAuth.ts             # Auth context hook
+│   │   │   ├── useProgress.ts         # Progress tracking hook
+│   │   │   ├── useApi.ts              # API calls hook
+│   │   │   └── useForm.ts             # Form state management
+│   │   ├── context/
+│   │   │   ├── AuthContext.tsx        # Authentication state
+│   │   │   ├── UserContext.tsx        # User profile state
+│   │   │   └── NotificationContext.tsx # Toast notifications
+│   │   ├── services/
+│   │   │   ├── api.ts                 # Axios instance & API calls
+│   │   │   ├── auth.ts                # Auth API methods
+│   │   │   ├── chapters.ts            # Chapter API methods
+│   │   │   ├── quizzes.ts             # Quiz API methods
+│   │   │   ├── payments.ts            # Payment API methods
+│   │   │   └── admin.ts               # Admin API methods
+│   │   ├── styles/
+│   │   │   ├── globals.css            # Global Tailwind imports
+│   │   │   ├── animations.css         # Custom animations
+│   │   │   └── variables.css          # CSS custom properties
+│   │   ├── pages/
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── NotFoundPage.tsx
+│   │   │   └── ErrorPage.tsx
+│   │   ├── types/
+│   │   │   ├── index.ts               # Shared TypeScript types
+│   │   │   └── api.ts                 # API response types
+│   │   ├── App.tsx                    # Main app component
+│   │   ├── main.tsx                   # React entry point (Vite)
+│   │   └── vite-env.d.ts              # Vite type definitions
+│   ├── public/
+│   │   ├── images/
+│   │   │   ├── instructor-photo.jpg   # James Grasell photo
+│   │   │   ├── logo.svg
+│   │   │   ├── favicon.ico
+│   │   │   └── hero-bg.jpg
+│   │   └── documents/
+│   │       └── sample-chapter.pdf
+│   ├── tests/
+│   │   ├── components.test.tsx
+│   │   ├── auth.test.ts
+│   │   └── integration.test.ts
+│   ├── .env.example
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── README.md
+│   └── .gitignore
+│
+├── database/
+│   ├── schema.sql                     # Complete schema creation
+│   ├── seed_chapters.sql              # Load 13 chapters
+│   ├── seed_questions.sql             # Load 113+ questions + 60-question exam
+│   ├── migrations.md                  # Migration documentation
+│   └── backup/                        # Backup scripts
+│       └── backup.sh
+│
+├── docs/
+│   ├── API.md                         # API endpoint documentation
+│   ├── DATABASE.md                    # Database schema & relationships
+│   ├── ARCHITECTURE.md                # System architecture diagram
+│   ├── SECURITY.md                    # Security checklist & best practices
+│   ├── DEPLOYMENT.md                  # DigitalOcean deployment guide
+│   ├── TESTING.md                     # Testing strategy & setup
+│   ├── INSTRUCTOR_GUIDE.md            # Admin panel user guide
+│   └── DEVELOPMENT.md                 # Developer onboarding guide
+│
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml                     # CI/CD pipeline (tests on PR)
+│   │   ├── deploy-staging.yml         # Auto-deploy to staging
+│   │   └── deploy-production.yml      # Manual deploy to production
+│   └── ISSUE_TEMPLATE/
+│       └── bug_report.md
+│
+├── docker/
+│   ├── Dockerfile.backend
+│   ├── Dockerfile.frontend
+│   └── docker-compose.yml
+│
+├── config/
+│   ├── nginx.conf                     # Nginx reverse proxy config
+│   ├── ssl.conf                       # SSL/TLS configuration
+│   └── monitoring.yaml                # Sentry + alerting config
+│
+├── scripts/
+│   ├── setup-local.sh                 # Local dev setup
+│   ├── setup-do.sh                    # DigitalOcean setup
+│   ├── db-migrate.sh                  # Database migration helper
+│   ├── backup-db.sh                   # Database backup script
+│   └── seed-data.sh                   # Load test data
+│
+├── README.md                          # Project overview
+├── CONTRIBUTING.md                    # Contribution guidelines
+├── LICENSE                            # MIT License
+└── .gitignore
+
+KEY FILES TO CREATE NEXT:
+1. /docs/DATABASE.md - Complete schema with ERD
+2. /docs/API.md - All 20+ endpoint specifications
+3. backend/package.json - Dependencies
+4. frontend/package.json - Dependencies
+5. /README.md - Project overview
