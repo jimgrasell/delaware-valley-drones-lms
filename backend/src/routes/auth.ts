@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { AppDataSource } from '../config/database';
-import { User } from '../models/User';
+import { User, UserRole } from '../models/User';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { authService } from '../services/AuthService';
@@ -28,8 +28,8 @@ router.post(
       throw new AppError('Password must be at least 8 characters long', 400, 'WEAK_PASSWORD');
     }
 
-    // Create user
-    const user = await authService.createUser(email, password, firstName, lastName, 'student');
+     // Create user
+     const user = await authService.createUser(email, password, firstName, lastName, UserRole.STUDENT);
 
     // Generate tokens
     const tokens = authService.generateTokens(user);

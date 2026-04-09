@@ -4,7 +4,7 @@ import { Question } from '../models/Question';
 import { QuestionOption } from '../models/QuestionOption';
 import { QuizAttempt, AttemptStatus } from '../models/QuizAttempt';
 import { QuizAnswer } from '../models/QuizAnswer';
-import { ChapterProgress } from '../models/ChapterProgress';
+import { ChapterProgress, ProgressStatus } from '../models/ChapterProgress';
 import { AppError } from '../middleware/errorHandler';
 import { calculateQuizScore, isQuizPassed } from '../utils/helpers';
 
@@ -220,7 +220,7 @@ export class QuizService {
 
     // Mark as completed if video was also watched
     if (progress.videoWatched) {
-      progress.status = 'completed';
+      progress.status = ProgressStatus.COMPLETED;
     }
 
     await this.chapterProgressRepository.save(progress);

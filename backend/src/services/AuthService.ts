@@ -1,5 +1,5 @@
-import jwt from 'jsonwebtoken';
-import { User } from '../models/User';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import { User, UserRole } from '../models/User';
 import { AppDataSource } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 
@@ -22,44 +22,44 @@ export class AuthService {
   /**
    * Generate JWT access token
    */
-  generateAccessToken(user: User): string {
-    const payload: TokenPayload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    };
+   generateAccessToken(user: User): string {
+     const payload: TokenPayload = {
+       userId: user.id,
+       email: user.email,
+       role: user.role,
+       name: user.name,
+     };
 
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new AppError('JWT secret not configured', 500, 'CONFIG_ERROR');
-    }
+     const secret = process.env.JWT_SECRET;
+     if (!secret) {
+       throw new AppError('JWT secret not configured', 500, 'CONFIG_ERROR');
+     }
 
-    const expiresIn = process.env.JWT_EXPIRATION || '24h';
+     const expiresIn = process.env.JWT_EXPIRATION || '24h';
 
-    return jwt.sign(payload, secret, { expiresIn });
-  }
+     return jwt.sign(payload, secret, { expiresIn } as SignOptions);
+   }
 
   /**
    * Generate JWT refresh token
    */
-  generateRefreshToken(user: User): string {
-    const payload: TokenPayload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    };
+   generateRefreshToken(user: User): string {
+     const payload: TokenPayload = {
+       userId: user.id,
+       email: user.email,
+       role: user.role,
+       name: user.name,
+     };
 
-    const secret = process.env.REFRESH_TOKEN_SECRET;
-    if (!secret) {
-      throw new AppError('Refresh token secret not configured', 500, 'CONFIG_ERROR');
-    }
+     const secret = process.env.REFRESH_TOKEN_SECRET;
+     if (!secret) {
+       throw new AppError('Refresh token secret not configured', 500, 'CONFIG_ERROR');
+     }
 
-    const expiresIn = process.env.REFRESH_TOKEN_EXPIRATION || '30d';
+     const expiresIn = process.env.REFRESH_TOKEN_EXPIRATION || '30d';
 
-    return jwt.sign(payload, secret, { expiresIn });
-  }
+     return jwt.sign(payload, secret, { expiresIn } as SignOptions);
+   }
 
   /**
    * Generate both tokens
@@ -145,7 +145,7 @@ export class AuthService {
     password: string,
     firstName: string,
     lastName: string,
-    role: string = 'student'
+    role: UserRole = UserRole.STUDENT
   ): Promise<User> {
     // Check if user already exists
     const existingUser = await this.findUserByEmail(email);

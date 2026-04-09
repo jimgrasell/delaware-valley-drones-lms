@@ -1,9 +1,9 @@
 import { AppDataSource } from '../config/database';
 import { User } from '../models/User';
-import { Enrollment } from '../models/Enrollment';
-import { ChapterProgress } from '../models/ChapterProgress';
+import { Enrollment, EnrollmentStatus } from '../models/Enrollment';
+import { ChapterProgress, ProgressStatus } from '../models/ChapterProgress';
 import { Chapter } from '../models/Chapter';
-import { QuizAttempt } from '../models/QuizAttempt';
+import { QuizAttempt, AttemptStatus } from '../models/QuizAttempt';
 import { Certificate } from '../models/Certificate';
 import { AppError } from '../middleware/errorHandler';
 import { formatProgress } from '../utils/helpers';
@@ -129,7 +129,7 @@ export class StudentService {
    */
   async getGradebook(userId: string) {
     const quizAttempts = await this.quizAttemptRepository.find({
-      where: { studentId: userId, status: 'graded' },
+      where: { studentId: userId, status: AttemptStatus.GRADED },
       relations: ['quiz', 'quiz.chapter'],
       order: { createdAt: 'DESC' },
     });
@@ -207,7 +207,7 @@ export class StudentService {
    */
   async getActiveEnrollment(userId: string) {
     const enrollment = await this.enrollmentRepository.findOne({
-      where: { studentId: userId, status: 'active' },
+      where: { studentId: userId, status: EnrollmentStatus.ACTIVE },
     });
 
     if (!enrollment) {

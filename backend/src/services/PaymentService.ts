@@ -157,7 +157,7 @@ export class PaymentService {
       enrollment = this.enrollmentRepository.create({
         studentId: payment.userId,
         status: EnrollmentStatus.ACTIVE,
-        enrolledAt: new Date(),
+        createdAt: new Date(),
       });
 
       await this.enrollmentRepository.save(enrollment);

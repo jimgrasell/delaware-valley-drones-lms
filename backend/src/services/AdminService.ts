@@ -23,13 +23,13 @@ export class AdminService {
   async getStudents(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
-    const [enrollments, total] = await this.enrollmentRepository.find({
-      where: { status: EnrollmentStatus.ACTIVE },
-      relations: ['student'],
-      skip,
-      take: limit,
-      order: { enrolledAt: 'DESC' },
-    });
+     const [enrollments, total] = await this.enrollmentRepository.findAndCount({
+       where: { status: EnrollmentStatus.ACTIVE },
+       relations: ['student'],
+       skip,
+       take: limit,
+       order: { createdAt: 'DESC' },
+     });
 
     const studentDetails = await Promise.all(
       enrollments.map(async (enrollment) => {
@@ -37,7 +37,7 @@ export class AdminService {
           where: { userId: enrollment.studentId },
         });
 
-        const completedChapters = progressData.filter((p) => p.status === 'completed').length;
+        const completedChapters = progressData.filter((p) => p.status === ProgressStatus.COMPLETED).length;
         const passedQuizzes = progressData.filter((p) => p.quizPassed).length;
         const avgScore = this.calculateAverageScore(progressData);
 
@@ -45,7 +45,7 @@ export class AdminService {
           id: enrollment.student.id,
           name: enrollment.student.name,
           email: enrollment.student.email,
-          enrolledAt: enrollment.enrolledAt,
+          createdAt: enrollment.createdAt,
           completedChapters,
           totalChapters: 13,
           completionPercentage: (completedChapters / 13) * 100,
@@ -91,14 +91,14 @@ export class AdminService {
       where: { studentId },
     });
 
-    const completedChapters = progressData.filter((p) => p.status === 'completed').length;
+    const completedChapters = progressData.filter((p) => p.status === ProgressStatus.COMPLETED).length;
     const passedQuizzes = progressData.filter((p) => p.quizPassed).length;
 
     return {
       id: user.id,
       name: user.name,
       email: user.email,
-      enrolledAt: enrollment?.enrolledAt,
+      createdAt: enrollment?.createdAt,
       status: enrollment?.status,
       completionStats: {
         completedChapters,
@@ -108,16 +108,16 @@ export class AdminService {
         totalAttempts: attempts.length,
         averageScore: this.calculateAverageScoreFromAttempts(attempts),
       },
-      chapterProgress: progressData.map((p) => ({
-        chapterId: p.chapterId,
-        chapterTitle: p.chapter?.title,
-        status: p.status,
-        videoWatched: p.videoWatched,
-        videoProgress: p.videoProgress,
-        quizPassed: p.quizPassed,
-        bestQuizScore: p.bestQuizScore,
-        completedAt: p.completedAt,
-      })),
+       chapterProgress: progressData.map((p) => ({
+         chapterId: p.chapterId,
+         chapterTitle: p.chapter?.title,
+         status: p.status,
+         videoWatched: p.videoWatched,
+         videoProgress: p.videoProgress,
+         quizPassed: p.quizPassed,
+         bestQuizScore: p.bestQuizScore,
+         updatedAt: p.updatedAt,
+       })),
     };
   }
 
@@ -138,26 +138,26 @@ export class AdminService {
       throw new AppError(`Chapter ${chapterNumber} already exists`, 400, 'DUPLICATE_CHAPTER');
     }
 
-    const chapter = this.chapterRepository.create({
-      title,
-      description,
-      chapterNumber,
-      videoVimeoId,
-      published: true,
-      contentHtml: '',
-    });
+     const chapter = this.chapterRepository.create({
+       title,
+       description,
+       chapterNumber,
+       videoVimeoId,
+       isPublished: true,
+       content: '',
+     });
 
     await this.chapterRepository.save(chapter);
 
-    return {
-      id: chapter.id,
-      title: chapter.title,
-      description: chapter.description,
-      chapterNumber: chapter.chapterNumber,
-      videoVimeoId: chapter.videoVimeoId,
-      published: chapter.published,
-      createdAt: chapter.createdAt,
-    };
+     return {
+       id: chapter.id,
+       title: chapter.title,
+       description: chapter.description,
+       chapterNumber: chapter.chapterNumber,
+       videoVimeoId: chapter.videoVimeoId,
+       isPublished: chapter.isPublished,
+       createdAt: chapter.createdAt,
+     };
   }
 
   /**
@@ -167,7 +167,7 @@ export class AdminService {
     chapterId: string,
     title?: string,
     description?: string,
-    contentHtml?: string,
+    content?: string,
     videoVimeoId?: string,
     videoDurationSeconds?: number
   ) {
@@ -179,7 +179,7 @@ export class AdminService {
 
     if (title) chapter.title = title;
     if (description) chapter.description = description;
-    if (contentHtml !== undefined) chapter.contentHtml = contentHtml;
+    if (content !== undefined) chapter.content = content;
     if (videoVimeoId) chapter.videoVimeoId = videoVimeoId;
     if (videoDurationSeconds) chapter.videoDurationSeconds = videoDurationSeconds;
 
@@ -221,7 +221,7 @@ export class AdminService {
     const completedStudents = new Set();
     for (const studentId of allStudentIds) {
       const studentProgress = allProgress.filter((p) => p.userId === studentId);
-      const allCompleted = studentProgress.every((p) => p.status === 'completed');
+      const allCompleted = studentProgress.every((p) => p.status === ProgressStatus.COMPLETED);
       if (allCompleted && studentProgress.length > 0) {
         completedStudents.add(studentId);
       }

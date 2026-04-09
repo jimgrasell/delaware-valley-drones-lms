@@ -66,6 +66,15 @@ export class User {
   @Column({ type: 'boolean', default: false })
   isBlocked: boolean;
 
+  @Column({ nullable: true })
+  phone?: string;
+
+  @Column({ nullable: true })
+  bio?: string;
+
+  @Column({ nullable: true })
+  profilePhotoUrl?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -1,6 +1,6 @@
 import { AppDataSource } from '../config/database';
 import { Chapter } from '../models/Chapter';
-import { ChapterProgress } from '../models/ChapterProgress';
+import { ChapterProgress, ProgressStatus } from '../models/ChapterProgress';
 import { Quiz } from '../models/Quiz';
 import { AppError } from '../middleware/errorHandler';
 
@@ -75,7 +75,7 @@ export class ChapterService {
       progress = this.chapterProgressRepository.create({
         userId,
         chapterId,
-        status: 'in_progress',
+        status: ProgressStatus.IN_PROGRESS,
         videoWatched: true,
         videoProgress: 100,
         videoWatchedAt: new Date(),
@@ -86,8 +86,8 @@ export class ChapterService {
       progress.videoWatchedAt = new Date();
 
       // Update status to in_progress if not started
-      if (progress.status === 'not_started') {
-        progress.status = 'in_progress';
+      if (progress.status === ProgressStatus.NOT_STARTED) {
+        progress.status = ProgressStatus.IN_PROGRESS;
       }
     }
 
@@ -122,7 +122,7 @@ export class ChapterService {
       chapterProgress = this.chapterProgressRepository.create({
         userId,
         chapterId,
-        status: 'in_progress',
+        status: ProgressStatus.IN_PROGRESS,
         videoProgress: progress,
       });
     } else {
@@ -135,8 +135,8 @@ export class ChapterService {
       }
 
       // Update status to in_progress if not started
-      if (chapterProgress.status === 'not_started') {
-        chapterProgress.status = 'in_progress';
+      if (chapterProgress.status === ProgressStatus.NOT_STARTED) {
+        chapterProgress.status = ProgressStatus.IN_PROGRESS;
       }
     }
 
@@ -223,13 +223,13 @@ export class ChapterService {
       });
     }
 
-    progress.status = 'completed';
+    progress.status = ProgressStatus.COMPLETED;
 
     await this.chapterProgressRepository.save(progress);
 
     return {
       chapterId,
-      status: 'completed',
+      status: ProgressStatus.COMPLETED,
     };
   }
 
