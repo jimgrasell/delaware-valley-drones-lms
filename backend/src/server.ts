@@ -12,14 +12,26 @@ import { authMiddleware } from './middleware/auth';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // Initialize logger
-const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: {
+// Only use the pino-pretty transport when it is actually installed. In
+// production builds (NODE_ENV=production) devDependencies are skipped, so
+// pino-pretty may not be available and requiring it as a transport target
+// would crash the server on startup.
+let loggerTransport: pino.TransportSingleOptions | undefined;
+try {
+  require.resolve('pino-pretty');
+  loggerTransport = {
     target: 'pino-pretty',
     options: {
       colorize: true,
     },
-  },
+  };
+} catch {
+  // pino-pretty not installed; fall back to default JSON logging.
+}
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  ...(loggerTransport ? { transport: loggerTransport } : {}),
 });
 
 const app: Express = express();
