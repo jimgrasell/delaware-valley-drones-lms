@@ -128,7 +128,24 @@ async function startServer() {
       logger.info(`🔐 CORS Origins: ${corsOrigins.join(', ')}`);
     });
   } catch (error) {
-    logger.error('❌ Failed to start server:', error);
+    // Pino's API is `error(mergingObject, message)` — passing the string
+    // first would drop the Error object, which is what caused earlier
+    // deploys to log an empty "Failed to start server:" line with no
+    // details. Log the error object explicitly, and also write to stderr
+    // as a belt-and-suspenders fallback so startup failures are always
+    // visible in the platform logs.
+    const err = error as Error;
+    logger.error(
+      {
+        err,
+        message: err?.message,
+        stack: err?.stack,
+        code: (err as NodeJS.ErrnoException)?.code,
+      },
+      '❌ Failed to start server'
+    );
+    // eslint-disable-next-line no-console
+    console.error('❌ Failed to start server:', err?.stack || err);
     process.exit(1);
   }
 }
