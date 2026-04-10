@@ -26,6 +26,12 @@ function Header() {
 
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3">
+            <Link
+              to="/dashboard"
+              className="hidden sm:inline-block text-sm bg-white/10 hover:bg-white/20 transition rounded px-3 py-1.5"
+            >
+              Dashboard
+            </Link>
             <div className="hidden sm:flex flex-col items-end leading-tight">
               <span className="text-sm font-medium">
                 {user.firstName} {user.lastName}

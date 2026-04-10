@@ -19,8 +19,10 @@ function LoginPage() {
   const [password, setPassword] = useState('');
 
   // Where to send the user after successful login. If they were redirected
-  // here from a protected page, return them; otherwise go home.
-  const from = (location.state as LocationState | null)?.from?.pathname || '/';
+  // here from a protected page, return them; otherwise default to the
+  // dashboard, which is the natural logged-in landing page.
+  const from =
+    (location.state as LocationState | null)?.from?.pathname || '/dashboard';
 
   // If already logged in, bounce to the destination immediately.
   useEffect(() => {

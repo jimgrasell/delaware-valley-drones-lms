@@ -19,10 +19,10 @@ function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [clientError, setClientError] = useState<string | null>(null);
 
-  // Already logged in? Skip the form.
+  // Already logged in? Skip the form and go straight to the dashboard.
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -65,7 +65,7 @@ function RegisterPage() {
         email: email.trim(),
         password,
       });
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch {
       // The store has set serverError; nothing else to do.
     }
