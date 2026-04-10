@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import { getAccessToken, setAccessToken } from './token';
 
 // VITE_API_URL is set per-environment:
 //   - local dev: leave unset (or "/api/v1") and Vite proxies /api to the
@@ -12,48 +13,63 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Tokens flow as Authorization: Bearer <jwt>, not cookies, so we don't
-  // need credentials.
+  // JWTs flow as Authorization: Bearer <token>, not cookies, so we don't
+  // need credentials on cross-origin requests.
   withCredentials: false,
 });
 
 // ---------------------------------------------------------------------------
-// Types mirroring the backend response shapes. Kept narrow on purpose — we
-// only declare what this proof-of-life page actually consumes.
+// Request interceptor: attach the bearer token to every request when one
+// is set. The token comes from the in-memory token holder, which is kept
+// in sync by the auth store on login/logout/rehydrate.
 // ---------------------------------------------------------------------------
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-export interface Chapter {
-  id: string;
-  title: string;
-  description: string;
-  chapterNumber: number;
-  content: string | null;
-  videoUrl: string | null;
-  videoVimeoId: string | null;
-  videoDurationSeconds: number;
-  downloadUrl: string | null;
-  isPublished: boolean;
-  order: number;
-  quizCount: number;
-  progress: unknown | null;
+// ---------------------------------------------------------------------------
+// Response interceptor: on 401, clear local auth state and let the caller
+// see the error. Components can render an error message and redirect.
+//
+// We don't try to refresh the token here yet — that's a future iteration.
+// Default access token lifetime on the backend is 24h, so it's not urgent.
+// ---------------------------------------------------------------------------
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      setAccessToken(null);
+      // Best-effort: nudge any persisted auth state. We can't import the
+      // store here (circular), so the LoginPage / route guards in callers
+      // are responsible for redirecting.
+      try {
+        localStorage.removeItem('dvd-lms-auth');
+      } catch {
+        // localStorage may be unavailable in some environments
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Helper: extract a human-readable error message from any axios error.
+// Backend errors come back as { error, message, status } per the
+// AppError shape in backend/src/middleware/errorHandler.ts.
+// ---------------------------------------------------------------------------
+export function getApiErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data as
+      | { message?: string; error?: string }
+      | undefined;
+    if (data?.message) return data.message;
+    if (data?.error) return data.error;
+    if (err.message) return err.message;
+  }
+  if (err instanceof Error) return err.message;
+  return 'An unexpected error occurred.';
 }
-
-export interface ChaptersResponse {
-  success: boolean;
-  message: string;
-  data: {
-    total: number;
-    chapters: Chapter[];
-  };
-}
-
-// ---------------------------------------------------------------------------
-// API surface
-// ---------------------------------------------------------------------------
-
-export const chaptersApi = {
-  list: async (): Promise<ChaptersResponse> => {
-    const { data } = await apiClient.get<ChaptersResponse>('/chapters');
-    return data;
-  },
-};

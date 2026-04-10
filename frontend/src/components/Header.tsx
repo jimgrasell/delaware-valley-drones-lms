@@ -1,0 +1,58 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/auth';
+
+function Header() {
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/', { replace: true });
+  };
+
+  return (
+    <header className="bg-brand text-white shadow">
+      <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
+        <Link to="/" className="block">
+          <h1 className="text-xl font-semibold tracking-tight">
+            Delaware Valley Drones
+          </h1>
+          <p className="text-xs text-white/80 mt-0.5">
+            FAA Part 107 Remote Pilot Certification
+          </p>
+        </Link>
+
+        {isAuthenticated && user ? (
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex flex-col items-end leading-tight">
+              <span className="text-sm font-medium">
+                {user.firstName} {user.lastName}
+              </span>
+              <span className="text-xs text-white/70 capitalize">
+                {user.role}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-sm bg-white/10 hover:bg-white/20 transition rounded px-3 py-1.5"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <Link
+            to="/login"
+            className="text-sm bg-white/10 hover:bg-white/20 transition rounded px-3 py-1.5"
+          >
+            Sign in
+          </Link>
+        )}
+      </div>
+    </header>
+  );
+}
+
+export default Header;

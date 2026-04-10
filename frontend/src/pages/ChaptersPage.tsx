@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { chaptersApi, type Chapter } from '../api/client';
+import { chaptersApi, type Chapter } from '../api/chapters';
 
 type LoadState =
   | { kind: 'loading' }
