@@ -43,12 +43,20 @@ function Header() {
             </button>
           </div>
         ) : (
-          <Link
-            to="/login"
-            className="text-sm bg-white/10 hover:bg-white/20 transition rounded px-3 py-1.5"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/login"
+              className="text-sm bg-white/10 hover:bg-white/20 transition rounded px-3 py-1.5"
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/register"
+              className="text-sm bg-white text-brand hover:bg-white/90 transition rounded px-3 py-1.5 font-medium"
+            >
+              Sign up
+            </Link>
+          </div>
         )}
       </div>
     </header>
