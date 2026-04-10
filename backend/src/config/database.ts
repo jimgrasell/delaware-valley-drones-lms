@@ -54,33 +54,51 @@ const isProduction = process.env.NODE_ENV === 'production';
 // local development keeps working.
 const databaseUrl = process.env.DATABASE_URL;
 
-// DO managed Postgres requires TLS. Allow self-signed certs — DO's cert
-// chain isn't in Node's default trust store unless CA_CERT is provided.
-const sslConfig =
-  isProduction || databaseUrl ? { rejectUnauthorized: false } : false;
+// DO managed Postgres requires TLS but uses an internal CA that isn't in
+// Node's default trust store, so we accept the self-signed chain. If
+// CA_CERT is provided (e.g. the CA downloaded from the DO dashboard), we
+// pin against it and require verification.
+const caCert = process.env.DATABASE_CA_CERT || process.env.CA_CERT;
+const sslConfig = caCert
+  ? { ca: caCert, rejectUnauthorized: true }
+  : isProduction || databaseUrl
+  ? { rejectUnauthorized: false }
+  : false;
 
-const baseOptions = {
-  type: 'postgres' as const,
+// Parse DATABASE_URL ourselves into discrete fields rather than passing the
+// url string to the driver. Recent versions of `pg-connection-string` (used
+// by node-postgres) upgrade `sslmode=require` to `verify-full`, which
+// overrides our `ssl` config and fails with "self-signed certificate in
+// certificate chain" against DO Postgres. Passing host/user/etc. directly
+// means our ssl config is the one that takes effect.
+function parseDatabaseUrl(urlString: string) {
+  const parsed = new URL(urlString);
+  return {
+    host: parsed.hostname,
+    port: parseInt(parsed.port || '5432'),
+    username: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: parsed.pathname.replace(/^\//, ''),
+  };
+}
+
+const connectionOptions = databaseUrl
+  ? parseDatabaseUrl(databaseUrl)
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      database: process.env.DB_NAME || 'delaware_valley_drones',
+    };
+
+export const AppDataSource = new DataSource({
+  type: 'postgres',
+  ...connectionOptions,
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
   entities,
   migrations: [migrationsPath],
   subscribers: [subscribersPath],
   ssl: sslConfig,
-};
-
-export const AppDataSource = new DataSource(
-  databaseUrl
-    ? {
-        ...baseOptions,
-        url: databaseUrl,
-      }
-    : {
-        ...baseOptions,
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT || '5432'),
-        username: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || 'postgres',
-        database: process.env.DB_NAME || 'delaware_valley_drones',
-      }
-);
+});
