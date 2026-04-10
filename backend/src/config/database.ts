@@ -92,10 +92,20 @@ const connectionOptions = databaseUrl
       database: process.env.DB_NAME || 'delaware_valley_drones',
     };
 
+// Schema auto-creation. On by default in development. In production it is
+// off unless DB_SYNCHRONIZE=true is set explicitly — used to bootstrap the
+// schema on first deploy (set the env var once, deploy, then unset it).
+// Never leave this on permanently in production: TypeORM will try to
+// reconcile the live schema against the entity models on every startup and
+// can drop or alter columns.
+const shouldSynchronize =
+  process.env.DB_SYNCHRONIZE === 'true' ||
+  process.env.NODE_ENV === 'development';
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   ...connectionOptions,
-  synchronize: process.env.NODE_ENV === 'development',
+  synchronize: shouldSynchronize,
   logging: process.env.NODE_ENV === 'development',
   entities,
   migrations: [migrationsPath],
