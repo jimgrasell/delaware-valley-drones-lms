@@ -1,0 +1,150 @@
+Apr 09 22:47:21  [34m╭────────────[34m[30m[44m git repo clone [0m[0m[34m───────────╼[0m
+Apr 09 22:47:21  [34m│[0m [34m › fetching app source code[0m
+Apr 09 22:47:21  [34m│[0m => Selecting branch "main"
+Apr 09 22:47:21  [34m│[0m => Checking out commit "d54d8ea7bf49c3fe83763ee74b75ca9229cf2cef"
+Apr 09 22:47:21  [34m│[0m 
+Apr 09 22:47:21  [34m│[0m [32m ✔ cloned repo to [35m/workspace[0m[0m
+Apr 09 22:47:21  [34m╰────────────────────────────────────────╼[0m
+Apr 09 22:47:21  
+Apr 09 22:47:21  [34m › applying source directory [35mbackend[0m[0m
+Apr 09 22:47:21  [32m ✔ using workspace root [35m/workspace/backend[0m[0m
+Apr 09 22:47:21  
+Apr 09 22:47:21  [34m╭────────────[34m[30m[44m buildpack detection [0m[0m[34m───────────╼[0m
+Apr 09 22:47:21  [34m│[0m [34m › using Ubuntu 22.04 stack[0m
+Apr 09 22:47:22  [34m│[0m Detected the following buildpacks suitable to build your app:
+Apr 09 22:47:22  [34m│[0m 
+Apr 09 22:47:22  [34m│[0m    digitalocean/nodejs-appdetect  v0.1.2    
+Apr 09 22:47:22  [34m│[0m    heroku/nodejs                  v0.338.5  (Node.js)
+Apr 09 22:47:22  [34m│[0m    digitalocean/procfile          v0.1.0    (Procfile)
+Apr 09 22:47:22  [34m│[0m    digitalocean/custom            v0.2.0    (Custom Build Command)
+Apr 09 22:47:22  [34m╰─────────────────────────────────────────────╼[0m
+Apr 09 22:47:22  
+Apr 09 22:47:22  [34m╭────────────[34m[30m[44m app build [0m[0m[34m───────────╼[0m
+Apr 09 22:47:22  [34m│[0m [33;1mWarning: [0mno analyzed metadata found at path '/layers/analyzed.toml'
+Apr 09 22:47:22  [34m│[0m Timer: Builder started at 2026-04-09T22:47:22Z
+Apr 09 22:47:23  [34m│[0m        
+Apr 09 22:47:23  [34m│[0m -----> Creating runtime environment
+Apr 09 22:47:23  [34m│[0m        
+Apr 09 22:47:23  [34m│[0m        NPM_CONFIG_LOGLEVEL=error
+Apr 09 22:47:23  [34m│[0m        NODE_VERBOSE=false
+Apr 09 22:47:23  [34m│[0m        NODE_ENV=
+Apr 09 22:47:23  [34m│[0m        NODE_MODULES_CACHE=true
+Apr 09 22:47:23  [34m│[0m        
+Apr 09 22:47:23  [34m│[0m -----> Installing binaries
+Apr 09 22:47:23  [34m│[0m        engines.node (package.json):   >=18.0.0
+Apr 09 22:47:23  [34m│[0m        engines.npm (package.json):    >=9.0.0
+Apr 09 22:47:23  [34m│[0m        
+Apr 09 22:47:23  [34m│[0m        Resolving node version >=18.0.0...
+Apr 09 22:47:23  [34m│[0m        
+Apr 09 22:47:23  [34m│[0m        ! The requested Node.js version is using a wide range (>=18.0.0) that can resolve to a Node.js major version
+Apr 09 22:47:23  [34m│[0m          higher than you intended. Limiting the requested range to a major LTS range like `22.x` is recommended.
+Apr 09 22:47:23  [34m│[0m          https://devcenter.heroku.com/articles/nodejs-support#specifying-a-node-js-version
+Apr 09 22:47:23  [34m│[0m        
+Apr 09 22:47:23  [34m│[0m        ! The resolved Node.js version has been limited to the Active LTS (22.22.1) for the requested range of `>=18.0.0`.
+Apr 09 22:47:23  [34m│[0m          To opt-out of this behavior, set the following config var: `NODEJS_ALLOW_WIDE_RANGE=true`
+Apr 09 22:47:23  [34m│[0m          https://devcenter.heroku.com/articles/nodejs-support#supported-node-js-versions
+Apr 09 22:47:23  [34m│[0m        
+Apr 09 22:47:23  [34m│[0m        Downloading and installing node 22.22.1...
+Apr 09 22:47:24  [34m│[0m        Validating checksum
+Apr 09 22:47:27  [34m│[0m        Bootstrapping npm >=9.0.0 (replacing 10.9.4)...
+Apr 09 22:47:32  [34m│[0m        npm 11.12.1 installed
+Apr 09 22:47:32  [34m│[0m        
+Apr 09 22:47:32  [34m│[0m -----> Installing dependencies
+Apr 09 22:47:32  [34m│[0m        Installing node modules (package.json)
+Apr 09 22:48:01  [34m│[0m        
+Apr 09 22:48:01  [34m│[0m        added 658 packages, and audited 659 packages in 29s
+Apr 09 22:48:01  [34m│[0m        
+Apr 09 22:48:01  [34m│[0m        114 packages are looking for funding
+Apr 09 22:48:01  [34m│[0m          run `npm fund` for details
+Apr 09 22:48:01  [34m│[0m        
+Apr 09 22:48:01  [34m│[0m        5 vulnerabilities (1 low, 3 high, 1 critical)
+Apr 09 22:48:01  [34m│[0m        
+Apr 09 22:48:01  [34m│[0m        To address issues that do not require attention, run:
+Apr 09 22:48:01  [34m│[0m          npm audit fix
+Apr 09 22:48:01  [34m│[0m        
+Apr 09 22:48:01  [34m│[0m        To address all issues (including breaking changes), run:
+Apr 09 22:48:01  [34m│[0m          npm audit fix --force
+Apr 09 22:48:01  [34m│[0m        
+Apr 09 22:48:01  [34m│[0m        Run `npm audit` for details.
+Apr 09 22:48:01  [34m│[0m        
+Apr 09 22:48:01  [34m│[0m -----> Build
+Apr 09 22:48:02  [34m│[0m        Running build
+Apr 09 22:48:02  [34m│[0m        
+Apr 09 22:48:02  [34m│[0m        > @dvd-lms/backend@1.0.0 build
+Apr 09 22:48:02  [34m│[0m        > tsc
+Apr 09 22:48:02  [34m│[0m        
+Apr 09 22:48:04  [34m│[0m        src/routes/auth.ts(195,35): error TS2339: Property 'phone' does not exist on type 'User'.
+Apr 09 22:48:04  [34m│[0m        src/routes/auth.ts(196,33): error TS2339: Property 'bio' does not exist on type 'User'.
+Apr 09 22:48:04  [34m│[0m        src/routes/auth.ts(197,45): error TS2339: Property 'profilePhotoUrl' does not exist on type 'User'.
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(31,16): error TS2353: Object literal may only specify known properties, and 'enrolledAt' does not exist in type 'FindOptionsOrder<Enrollment>'.
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(35,19): error TS2339: Property 'map' does not exist on type 'Enrollment'.
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(65,26): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(101,31): error TS2339: Property 'enrolledAt' does not exist on type 'Enrollment'.
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(119,24): error TS2339: Property 'completedAt' does not exist on type 'ChapterProgress'.
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(141,44): error TS2769: No overload matches this call.
+Apr 09 22:48:04  [34m│[0m          Overload 1 of 3, '(entityLikeArray: DeepPartial<Chapter>[]): Chapter[]', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'title' does not exist in type 'DeepPartial<Chapter>[]'.
+Apr 09 22:48:04  [34m│[0m          Overload 2 of 3, '(entityLike: DeepPartial<Chapter>): Chapter', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, but 'published' does not exist in type 'DeepPartial<Chapter>'. Did you mean to write 'isPublished'?
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(158,26): error TS2551: Property 'published' does not exist on type 'Chapter & Chapter[]'. Did you mean 'isPublished'?
+Apr 09 22:48:04  [34m│[0m        src/services/AdminService.ts(182,44): error TS2339: Property 'contentHtml' does not exist on type 'Chapter'.
+Apr 09 22:48:04  [34m│[0m        src/services/AuthService.ts(40,16): error TS2769: No overload matches this call.
+Apr 09 22:48:04  [34m│[0m          Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: SignOptions & { algorithm: "none"; }): string', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Argument of type 'string' is not assignable to parameter of type 'null'.
+Apr 09 22:48:04  [34m│[0m          Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions): string', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Type 'string' is not assignable to type 'number | StringValue'.
+Apr 09 22:48:04  [34m│[0m          Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+Apr 09 22:48:04  [34m│[0m        src/services/AuthService.ts(61,16): error TS2769: No overload matches this call.
+Apr 09 22:48:04  [34m│[0m          Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: SignOptions & { algorithm: "none"; }): string', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Argument of type 'string' is not assignable to parameter of type 'null'.
+Apr 09 22:48:04  [34m│[0m          Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions): string', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Type 'string' is not assignable to type 'number | StringValue'.
+Apr 09 22:48:04  [34m│[0m          Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+Apr 09 22:48:04  [34m│[0m        src/services/AuthService.ts(157,38): error TS2769: No overload matches this call.
+Apr 09 22:48:04  [34m│[0m          Overload 1 of 3, '(entityLikeArray: DeepPartial<User>[]): User[]', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'email' does not exist in type 'DeepPartial<User>[]'.
+Apr 09 22:48:04  [34m│[0m          Overload 2 of 3, '(entityLike: DeepPartial<User>): User', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Type 'string' is not assignable to type 'UserRole'.
+Apr 09 22:48:04  [34m│[0m        src/services/AuthService.ts(169,5): error TS2740: Type 'User[]' is missing the following properties from type 'User': id, firstName, lastName, email, and 18 more.
+Apr 09 22:48:04  [34m│[0m        src/services/ChapterService.ts(75,49): error TS2769: No overload matches this call.
+Apr 09 22:48:04  [34m│[0m          Overload 1 of 3, '(entityLikeArray: DeepPartial<ChapterProgress>[]): ChapterProgress[]', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'userId' does not exist in type 'DeepPartial<ChapterProgress>[]'.
+Apr 09 22:48:04  [34m│[0m          Overload 2 of 3, '(entityLike: DeepPartial<ChapterProgress>): ChapterProgress', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Type '"in_progress"' is not assignable to type 'ProgressStatus'.
+Apr 09 22:48:04  [34m│[0m        src/services/ChapterService.ts(90,9): error TS2322: Type '"in_progress"' is not assignable to type 'ProgressStatus'.
+Apr 09 22:48:04  [34m│[0m        src/services/ChapterService.ts(122,56): error TS2769: No overload matches this call.
+Apr 09 22:48:04  [34m│[0m          Overload 1 of 3, '(entityLikeArray: DeepPartial<ChapterProgress>[]): ChapterProgress[]', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'userId' does not exist in type 'DeepPartial<ChapterProgress>[]'.
+Apr 09 22:48:04  [34m│[0m          Overload 2 of 3, '(entityLike: DeepPartial<ChapterProgress>): ChapterProgress', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Type '"in_progress"' is not assignable to type 'ProgressStatus'.
+Apr 09 22:48:04  [34m│[0m        src/services/ChapterService.ts(139,9): error TS2322: Type '"in_progress"' is not assignable to type 'ProgressStatus'.
+Apr 09 22:48:04  [34m│[0m        src/services/ChapterService.ts(226,5): error TS2322: Type '"completed"' is not assignable to type 'ProgressStatus'.
+Apr 09 22:48:04  [34m│[0m        src/services/PaymentService.ts(157,46): error TS2769: No overload matches this call.
+Apr 09 22:48:04  [34m│[0m          Overload 1 of 3, '(entityLikeArray: DeepPartial<Enrollment>[]): Enrollment[]', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'studentId' does not exist in type 'DeepPartial<Enrollment>[]'.
+Apr 09 22:48:04  [34m│[0m          Overload 2 of 3, '(entityLike: DeepPartial<Enrollment>): Enrollment', gave the following error.
+Apr 09 22:48:04  [34m│[0m            Object literal may only specify known properties, and 'enrolledAt' does not exist in type 'DeepPartial<Enrollment>'.
+Apr 09 22:48:04  [34m│[0m        src/services/QuizService.ts(223,7): error TS2322: Type '"completed"' is not assignable to type 'ProgressStatus'.
+Apr 09 22:48:04  [34m│[0m        src/services/StudentService.ts(132,35): error TS2322: Type '"graded"' is not assignable to type 'AttemptStatus | FindOperator<AttemptStatus>'.
+Apr 09 22:48:04  [34m│[0m        src/services/StudentService.ts(210,35): error TS2322: Type '"active"' is not assignable to type 'EnrollmentStatus | FindOperator<EnrollmentStatus>'.
+Apr 09 22:48:05  [34m│[0m 
+Apr 09 22:48:05  [34m│[0m -----> Build failed
+Apr 09 22:48:05  [34m│[0m        
+Apr 09 22:48:05  [34m│[0m        We're sorry this build is failing! You can troubleshoot common issues here:
+Apr 09 22:48:05  [34m│[0m        https://devcenter.heroku.com/articles/troubleshooting-node-deploys
+Apr 09 22:48:05  [34m│[0m        
+Apr 09 22:48:05  [34m│[0m        Some possible problems:
+Apr 09 22:48:05  [34m│[0m        
+Apr 09 22:48:05  [34m│[0m        - Dangerous semver range (>) in engines.node
+Apr 09 22:48:05  [34m│[0m          https://devcenter.heroku.com/articles/nodejs-support#specifying-a-node-js-version
+Apr 09 22:48:05  [34m│[0m        
+Apr 09 22:48:05  [34m│[0m        Love,
+Apr 09 22:48:05  [34m│[0m        Heroku
+Apr 09 22:48:05  [34m│[0m        
+Apr 09 22:48:05  [34m│[0m Timer: Builder ran for 42.457670001s and ended at 2026-04-09T22:48:05Z
+Apr 09 22:48:05  [34m│[0m [31;1mERROR: [0mfailed to build: exit status 2
+Apr 09 22:48:05  [34m│[0m 
+Apr 09 22:48:05  [34m│[0m 
+Apr 09 22:48:05  [34m│[0m [31m ✘ build failed[0m
