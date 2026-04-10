@@ -13,13 +13,11 @@
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "type-check": "tsc --noEmit",
-    "migrate:create": "typeorm migration:generate",
-    "migrate:up": "typeorm migration:run",
-    "migrate:down": "typeorm migration:revert",
-    "seed:all": "ts-node src/seeds/index.ts",
-    "seed:chapters": "ts-node src/seeds/seedChapters.ts",
-    "seed:questions": "ts-node src/seeds/seedQuestions.ts",
-    "seed:admin": "ts-node src/seeds/seedAdmin.ts"
+    "migrate:up": "typeorm migration:run -d dist/config/database.js",
+    "migrate:down": "typeorm migration:revert -d dist/config/database.js",
+    "migrate:show": "typeorm migration:show -d dist/config/database.js",
+    "migrate:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.ts",
+    "migrate:create": "typeorm migration:create"
   },
   "dependencies": {
     "aws-sdk": "^2.1400.0",

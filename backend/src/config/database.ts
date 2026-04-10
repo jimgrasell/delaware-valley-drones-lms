@@ -112,3 +112,9 @@ export const AppDataSource = new DataSource({
   subscribers: [subscribersPath],
   ssl: sslConfig,
 });
+
+// Default export so `typeorm migration:run -d dist/config/database.js`
+// picks up the DataSource without any ambiguity. Named import
+// (`import { AppDataSource } from './config/database'`) keeps working
+// throughout the rest of the codebase.
+export default AppDataSource;
