@@ -1,0 +1,26 @@
+Apr 10 12:19:23  Node.js v22.22.1
+Apr 10 12:19:24  
+Apr 10 12:19:24  > @dvd-lms/backend@1.0.0 start
+Apr 10 12:19:24  > node dist/server.js
+Apr 10 12:19:24  
+Apr 10 12:19:26  /workspace/backend/node_modules/pino/lib/transport.js:146
+Apr 10 12:19:26        throw new Error(`unable to determine transport target for "${origin}"`)
+Apr 10 12:19:26        ^
+Apr 10 12:19:26  
+Apr 10 12:19:26  Error: unable to determine transport target for "pino-pretty"
+Apr 10 12:19:26      at fixTarget (/workspace/backend/node_modules/pino/lib/transport.js:146:13)
+Apr 10 12:19:26      at transport (/workspace/backend/node_modules/pino/lib/transport.js:116:22)
+Apr 10 12:19:26      at normalizeArgs (/workspace/backend/node_modules/pino/lib/tools.js:316:16)
+Apr 10 12:19:26      at pino (/workspace/backend/node_modules/pino/pino.js:90:28)
+Apr 10 12:19:26      at Object.<anonymous> (/workspace/backend/dist/server.js:18:35)
+Apr 10 12:19:26      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+Apr 10 12:19:26      at Object..js (node:internal/modules/cjs/loader:1838:10)
+Apr 10 12:19:26      at Module.load (node:internal/modules/cjs/loader:1441:32)
+Apr 10 12:19:26      at Function._load (node:internal/modules/cjs/loader:1263:12)
+Apr 10 12:19:26      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+Apr 10 12:19:26  
+Apr 10 12:19:26  Node.js v22.22.1
+Apr 10 12:19:54  ERROR failed health checks after 8 attempts with error Readiness probe failed: dial tcp 100.127.15.74:8080: connect: connection refused
+Apr 10 12:19:57  ERROR failed health checks after 7 attempts with error Readiness probe failed: dial tcp 100.127.12.109:8080: connect: connection refused
+Apr 10 12:19:26  ERROR component terminated with non-zero exit code: 1,
+Apr 10 12:19:55  ERROR component terminated with non-zero exit code: 1,
