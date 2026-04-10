@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { authApi, type User, type AuthTokens } from '../api/auth';
+import {
+  authApi,
+  type User,
+  type AuthTokens,
+  type RegisterPayload,
+} from '../api/auth';
 import { setAccessToken } from '../api/token';
 
 // Persisted shape — only the fields we want to survive a page reload.
@@ -18,6 +23,7 @@ interface AuthState extends PersistedAuth {
 
   // Actions
   login: (email: string, password: string) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   isAuthenticated: () => boolean;
@@ -25,6 +31,24 @@ interface AuthState extends PersistedAuth {
 }
 
 const STORAGE_KEY = 'dvd-lms-auth';
+
+// Best-effort error message extraction. Avoids importing axios into this
+// module so the store stays HTTP-client-agnostic.
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object') {
+    const e = err as {
+      response?: { data?: { message?: string; error?: string } };
+      message?: string;
+    };
+    return (
+      e.response?.data?.message ||
+      e.response?.data?.error ||
+      e.message ||
+      fallback
+    );
+  }
+  return fallback;
+}
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -53,22 +77,38 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (err: unknown) {
-          // Translate the error into a UI-friendly message. Don't import
-          // getApiErrorMessage from client.ts to avoid pulling axios into
-          // this module's signature — keep the store axios-agnostic.
-          let message = 'Login failed';
-          if (err && typeof err === 'object') {
-            const e = err as {
-              response?: { data?: { message?: string; error?: string } };
-              message?: string;
-            };
-            message =
-              e.response?.data?.message ||
-              e.response?.data?.error ||
-              e.message ||
-              message;
-          }
-          set({ isLoading: false, error: message });
+          set({
+            isLoading: false,
+            error: extractErrorMessage(err, 'Login failed'),
+          });
+          throw err;
+        }
+      },
+
+      register: async (payload) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authApi.register(payload);
+          const tokens: AuthTokens = response.tokens;
+
+          // Backend auto-logs the user in on successful registration —
+          // it returns a full token pair, same shape as login. Treat it
+          // identically: push the access token into the in-memory holder
+          // and persist user + tokens.
+          setAccessToken(tokens.accessToken);
+
+          set({
+            user: response.user,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            isLoading: false,
+            error: null,
+          });
+        } catch (err: unknown) {
+          set({
+            isLoading: false,
+            error: extractErrorMessage(err, 'Registration failed'),
+          });
           throw err;
         }
       },

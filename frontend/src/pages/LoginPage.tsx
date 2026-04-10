@@ -118,7 +118,14 @@ function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-sm text-slate-600">
-            <Link to="/" className="text-brand hover:text-brand-dark">
+            Don&apos;t have an account?{' '}
+            <Link to="/register" className="text-brand hover:text-brand-dark">
+              Create one
+            </Link>
+          </div>
+
+          <div className="mt-3 text-center text-xs text-slate-500">
+            <Link to="/" className="hover:text-slate-700">
               ← Back to chapters
             </Link>
           </div>

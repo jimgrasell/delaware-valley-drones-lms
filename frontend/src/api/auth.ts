@@ -36,6 +36,17 @@ interface LoginResponse {
   tokens: AuthTokens;
 }
 
+// Backend's POST /auth/register returns the same shape as login (user
+// plus tokens) — successful registration is auto-logged-in.
+type RegisterResponse = LoginResponse;
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface MeResponse {
   success: boolean;
   user: User;
@@ -51,6 +62,14 @@ export const authApi = {
       email,
       password,
     });
+    return data;
+  },
+
+  register: async (payload: RegisterPayload): Promise<RegisterResponse> => {
+    const { data } = await apiClient.post<RegisterResponse>(
+      '/auth/register',
+      payload
+    );
     return data;
   },
 
