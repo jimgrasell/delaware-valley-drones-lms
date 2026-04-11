@@ -177,7 +177,7 @@ function DashboardContent({ data }: { data: ProgressData }) {
             Chapter {nextChapter.chapterNumber}: {nextChapter.title}
           </h3>
           <Link
-            to="/"
+            to={`/chapters/${nextChapter.chapterId}`}
             className="mt-3 inline-block rounded-md bg-brand px-4 py-2 text-sm font-medium text-white shadow transition hover:bg-brand-light"
           >
             {nextChapter.status === 'not_started' ? 'Start chapter' : 'Resume chapter'}

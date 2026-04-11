@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { chaptersApi, type Chapter } from '../api/chapters';
 
 type LoadState =
@@ -71,38 +72,40 @@ function ChaptersPage() {
           </p>
           <ul className="space-y-3">
             {state.chapters.map((chapter) => (
-              <li
-                key={chapter.id}
-                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand hover:shadow"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
-                    {chapter.chapterNumber}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-slate-900">
-                      {chapter.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {chapter.description}
-                    </p>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-                      <span>
-                        {chapter.quizCount} quiz
-                        {chapter.quizCount === 1 ? '' : 'zes'}
-                      </span>
-                      {chapter.isPublished ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                          Published
+              <li key={chapter.id}>
+                <Link
+                  to={`/chapters/${chapter.id}`}
+                  className="block rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand hover:shadow focus:outline-none focus:ring-2 focus:ring-brand"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
+                      {chapter.chapterNumber}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-slate-900">
+                        {chapter.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {chapter.description}
+                      </p>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                        <span>
+                          {chapter.quizCount} quiz
+                          {chapter.quizCount === 1 ? '' : 'zes'}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
-                          Draft
-                        </span>
-                      )}
+                        {chapter.isPublished ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
+                            Published
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
+                            Draft
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               </li>
             ))}
           </ul>

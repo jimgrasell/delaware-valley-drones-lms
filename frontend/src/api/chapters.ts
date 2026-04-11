@@ -5,6 +5,16 @@ import { apiClient } from './client';
 // only declare what the consuming pages actually use.
 // ---------------------------------------------------------------------------
 
+export type ChapterProgressStatus = 'not_started' | 'in_progress' | 'completed';
+
+export interface ChapterProgressSummary {
+  status: ChapterProgressStatus;
+  videoWatched: boolean;
+  videoProgress: number;
+  quizPassed: boolean;
+  bestQuizScore: number;
+}
+
 export interface Chapter {
   id: string;
   title: string;
@@ -18,7 +28,7 @@ export interface Chapter {
   isPublished: boolean;
   order: number;
   quizCount: number;
-  progress: unknown | null;
+  progress: ChapterProgressSummary | null;
 }
 
 export interface ChaptersResponse {
@@ -30,6 +40,12 @@ export interface ChaptersResponse {
   };
 }
 
+export interface ChapterResponse {
+  success: boolean;
+  message: string;
+  data: Chapter;
+}
+
 // ---------------------------------------------------------------------------
 // API surface
 // ---------------------------------------------------------------------------
@@ -38,5 +54,14 @@ export const chaptersApi = {
   list: async (): Promise<ChaptersResponse> => {
     const { data } = await apiClient.get<ChaptersResponse>('/chapters');
     return data;
+  },
+
+  getById: async (id: string): Promise<Chapter> => {
+    const { data } = await apiClient.get<ChapterResponse>(`/chapters/${id}`);
+    return data.data;
+  },
+
+  markCompleted: async (id: string): Promise<void> => {
+    await apiClient.put(`/chapters/${id}/mark-completed`);
   },
 };
