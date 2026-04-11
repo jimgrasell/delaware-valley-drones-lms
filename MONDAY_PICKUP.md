@@ -1,12 +1,12 @@
 # Monday Pickup Notes
 
-Status snapshot and next-action plan from our weekend session ending **April 10, 2026**.
+Status snapshot and next-action plan. Last updated **April 11, 2026** (after Monday session).
 
 ---
 
 ## TL;DR: Where you left off
 
-You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean. Backend, database, frontend, login, registration, and a protected user dashboard all work end-to-end. Real students can register and see their progress page. The next step is the **chapter detail page** so the chapter cards become clickable and you can start showing actual course content.
+You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean with a working chapter detail page. Backend, database, frontend, login, registration, protected dashboard, and per-chapter routes all work end-to-end. Real students can register, see their progress, click into any chapter, and hit Mark Complete. The next big thing is either **real Part 107 chapter content** (the content itself is still placeholder) or the **quiz UI** (so Mark Complete isn't the only way to progress).
 
 **Live URL:** https://delaware-valley-drones-lms-app-u8wzb.ondigitalocean.app/
 
@@ -32,10 +32,11 @@ You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean. 
 - React 18 + Vite + TypeScript + TailwindCSS + Zustand + React Router 6 + Axios
 - Deployed as a Static Site component on the same DO app, sharing the domain with the backend
 - Built routes:
-  - `/` — public chapters page, lists all 13 chapters with quiz counts
+  - `/` — public chapters page, lists all 13 chapters with quiz counts; each card is a `<Link>` to `/chapters/:id`
+  - `/chapters/:id` — public chapter detail page; fetches `GET /api/v1/chapters/:id`, renders content (via `dangerouslySetInnerHTML` since the seeded content is HTML), shows Mark Complete button for authenticated users, disabled Take Quiz stub
   - `/login` — sign in form
   - `/register` — sign up form (5 fields with client + server validation)
-  - `/dashboard` — **protected** route, redirects to `/login` if not authenticated, shows greeting + stat cards + progress bar + per-chapter list
+  - `/dashboard` — **protected** route, redirects to `/login` if not authenticated, shows greeting + stat cards + progress bar + per-chapter list; Continue button links to `/chapters/:id`
 - Header: shows Sign in / Sign up when logged out, user name + role + Dashboard + Sign out when logged in
 - Auth state persists across page reloads (Zustand `persist` middleware → `localStorage`)
 - Axios request interceptor automatically attaches `Authorization: Bearer <token>` to every API call
@@ -45,6 +46,7 @@ You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean. 
 
 - `https://...ondigitalocean.app/` → static site (frontend)
 - `https://...ondigitalocean.app/api/*` → backend service (with `Preserve Path Prefix` on)
+- Static-site **Catchall Document** is set to `index.html` (set via DO dashboard → App → static-site component → Settings → Custom Pages). This makes React Router work on hard-loads, refreshes, and shared deep links like `/chapters/:id` and `/dashboard`. Without it, anything other than `/` returns a 404. **This setting currently only lives in the DO dashboard — not in git.** See operational item #18 below.
 
 ### Credentials
 
@@ -62,7 +64,7 @@ DELETE FROM users WHERE email LIKE 'test%@example.com';
 
 ---
 
-## Commits this session, in order
+## Commits through this session, in order
 
 ```
 d54d8ea  Initial commit: LMS backend implementation
@@ -79,9 +81,12 @@ d0a96c9  Scaffold Vite + React + Tailwind frontend with Chapters page
 5e089f4  Add registration form and /register route
 b00c0fc  Add Sign up button to header
 e61ee8c  Add protected /dashboard route with per-chapter progress
+061762d  Add MONDAY_PICKUP.md status doc
+dacb499  Add chapter detail page at /chapters/:id         ← Monday Apr 11
+a05030c  Add Claude Code launch config for frontend dev   ← Monday Apr 11
 ```
 
-All pushed to `origin/main` and deployed.
+All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** is NOT a commit — it was made directly in the DO dashboard. See operational item #18.
 
 ---
 
@@ -99,7 +104,11 @@ All pushed to `origin/main` and deployed.
 
 6. **The dashboard uses `GET /api/v1/students/progress`** (not `/students/dashboard`), because the dashboard endpoint returns `totalChapters: 0` for unenrolled users while the progress endpoint always returns all 13 chapters.
 
-7. **The "Continue chapter" button on the dashboard currently links to `/`**, not to a real chapter page, because `/chapters/:id` doesn't exist yet. Fix this when building the chapter detail page.
+7. ~~**The "Continue chapter" button on the dashboard currently links to `/`**, not to a real chapter page, because `/chapters/:id` doesn't exist yet.~~ **Fixed Apr 11** — links to `/chapters/${nextChapter.chapterId}`.
+
+8. **Chapter content is rendered via `dangerouslySetInnerHTML`** in `ChapterDetailPage.tsx` because the seeded content is HTML strings. Fine for now because content only comes from trusted backend writes, but when the admin content editor is built (item #5), sanitize on input OR switch this to a markdown/sanitized renderer. Don't let untrusted user input flow through this path.
+
+9. **Mark Complete button calls `PUT /api/v1/chapters/:id/mark-completed` directly.** Per `ChapterService`, that endpoint may require a pre-existing progress row with `videoWatched: true` — this wasn't verified end-to-end on Monday because I didn't have login credentials. If it 400s on first click from a fresh account, either also hit `mark-watched` first or loosen the backend's precondition.
 
 ---
 
@@ -107,15 +116,7 @@ All pushed to `origin/main` and deployed.
 
 ### 🔴 High priority (next session)
 
-1. **Chapter detail page at `/chapters/:id`**
-   - Make the chapter cards on `/` clickable (wrap in `<Link to={\`/chapters/\${id}\`}>`)
-   - Add the route in `App.tsx` (probably wrap in ProtectedRoute, or leave public — your call)
-   - New page fetches `GET /api/v1/chapters/:id`
-   - Renders chapter content (currently `<p>Chapter content coming soon...</p>` for every chapter — see content priority below)
-   - Adds a "Mark complete" button calling backend chapter progress endpoint
-   - Adds a "Take quiz" button (disabled for now, becomes active when quiz UI lands)
-   - Update DashboardPage's "Continue where you left off" button to link here instead of `/`
-   - **Estimated:** 1 session
+1. ~~**Chapter detail page at `/chapters/:id`**~~ ✅ **Done Apr 11** (commit `dacb499`). Route is public (not gated by `ProtectedRoute`) so unauthenticated users can browse content; the Mark Complete action itself is auth-gated inside the component. Authenticated flow (Mark Complete POST, Dashboard Continue link) was not verified end-to-end because I didn't have login creds during the session — worth a quick smoke test next time you're logged in.
 
 2. **Real Part 107 chapter content**
    - Every chapter currently says `"<p>Chapter content coming soon. Check back for video lessons and study materials.</p>"`
@@ -197,6 +198,13 @@ All pushed to `origin/main` and deployed.
 
 17. **Error monitoring.** Sentry, LogRocket, or DO's built-in logs only? Decide before you have real users.
 
+18. **Export the DO app spec to `.do/app.yaml` (IaC).** Currently the DO app is configured entirely via the dashboard. As of Apr 11, that dashboard-only config includes the critical **Catchall Document = `index.html`** setting that makes SPA deep links work — if you ever recreate the app, tear down the component, or spin up a staging env, you have to remember to click that again. Fix this by:
+    - `brew install doctl && doctl auth init`
+    - `doctl apps spec get fe6b594d-7116-42d8-9f50-39a4f4fed6d9 > .do/app.yaml`
+    - Review the exported YAML, confirm `catchall_document: index.html` is in the static-site entry, confirm env var `Encrypted` secrets aren't dumped in plaintext (DO redacts them but double-check), commit it
+    - From then on, edit `.do/app.yaml` in git and run `doctl apps update <id> --spec .do/app.yaml` (or wire it into a deploy hook)
+    - **Estimated:** 1 session. Best done together with item #11 (custom domain) and #13 (pre-deploy migration job), both of which also want spec-level control.
+
 ---
 
 ## Three security / housekeeping items still open
@@ -209,15 +217,25 @@ All pushed to `origin/main` and deployed.
 
 ---
 
-## Recommended Monday opening move
+## Recommended next opening move
 
-**Build the chapter detail page (item 1).** It's the natural next step, it unlocks the "Continue chapter" button on the dashboard, and it sets up the URL structure for the eventual quiz page. About 1 session of work.
+You have two natural paths depending on where you want to spend your time:
 
-The opening prompt for Monday could be something like:
+**Option A — Content-first (item #2): Real Part 107 chapter content.**
+The app is fully functional but every chapter still says "Chapter content coming soon." Writing real content + a one-time loader script that slurps Markdown files into the DB is the fastest way to make the LMS actually *useful* for students. This is a content-authoring task more than a code task; the loader script itself is ~1 session but the content writing is the long pole. Good choice if you want to dogfood the app yourself.
 
-> "Pick up from MONDAY_PICKUP.md. Let's build the chapter detail page at /chapters/:id. Make the chapter cards on the home page clickable, fetch the chapter from the backend, render it, and update the dashboard's Continue button to link there."
+**Option B — Interactivity-first (item #3): Quiz UI at `/chapters/:id/quiz`.**
+Wires up the one piece of real interactivity left. Backend endpoints already exist. About 1-2 sessions. Good choice if you want to keep the technical momentum going and punt content authoring to later.
 
-That's enough for Monday to land somewhere meaningful.
+Suggested opening prompts:
+
+> "Pick up from MONDAY_PICKUP.md. Let's write a Markdown loader script for chapter content — I'll have Markdown files ready at `content/chapters/01-intro.md` etc. Write the loader so I can run it against production once."
+
+Or:
+
+> "Pick up from MONDAY_PICKUP.md. Let's build the quiz UI at /chapters/:id/quiz. Multiple-choice, submit, results screen — hit the existing backend quiz endpoints."
+
+Either one lands somewhere meaningful.
 
 ---
 
@@ -255,7 +273,8 @@ frontend/
 │   │   ├── Header.tsx              ← top nav, auth-aware
 │   │   └── ProtectedRoute.tsx      ← auth wrapper
 │   ├── pages/
-│   │   ├── ChaptersPage.tsx        ← public catalog
+│   │   ├── ChaptersPage.tsx        ← public catalog (cards are Links to /chapters/:id)
+│   │   ├── ChapterDetailPage.tsx   ← public; Mark Complete is auth-gated inside
 │   │   ├── LoginPage.tsx
 │   │   ├── RegisterPage.tsx
 │   │   └── DashboardPage.tsx       ← protected
@@ -264,4 +283,4 @@ frontend/
 
 ---
 
-Have a good weekend.
+Last updated end of day Mon Apr 11, 2026.
