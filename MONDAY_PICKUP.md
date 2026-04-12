@@ -1,12 +1,12 @@
 # Monday Pickup Notes
 
-Status snapshot and next-action plan. Last updated **April 11, 2026** (after Monday session).
+Status snapshot and next-action plan. Last updated **end of day Monday April 11, 2026** (after Monday evening session).
 
 ---
 
 ## TL;DR: Where you left off
 
-You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean with a working chapter detail page. Backend, database, frontend, login, registration, protected dashboard, and per-chapter routes all work end-to-end. Real students can register, see their progress, click into any chapter, and hit Mark Complete. The next big thing is either **real Part 107 chapter content** (the content itself is still placeholder) or the **quiz UI** (so Mark Complete isn't the only way to progress).
+You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean with **real Part 107 chapter content** loaded into all 13 chapters. Every chapter renders proper headings, lists, paragraphs, and figures (47 embedded PNGs extracted from the source docx files). Students can register, browse chapters, and read the real course material. The biggest remaining pieces are **quizzes** (questions are still placeholder, and there's no quiz UI yet) and **enrollment/payments** (course is currently free to anyone who registers).
 
 **Live URL:** https://delaware-valley-drones-lms-app-u8wzb.ondigitalocean.app/
 
@@ -33,7 +33,7 @@ You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean w
 - Deployed as a Static Site component on the same DO app, sharing the domain with the backend
 - Built routes:
   - `/` — public chapters page, lists all 13 chapters with quiz counts; each card is a `<Link>` to `/chapters/:id`
-  - `/chapters/:id` — public chapter detail page; fetches `GET /api/v1/chapters/:id`, renders content (via `dangerouslySetInnerHTML` since the seeded content is HTML), shows Mark Complete button for authenticated users, disabled Take Quiz stub
+  - `/chapters/:id` — public chapter detail page; fetches `GET /api/v1/chapters/:id`, renders real Part 107 content via `dangerouslySetInnerHTML` inside a Tailwind Typography `prose` container (headings, lists, images all styled), shows Mark Complete button for authenticated users, disabled Take Quiz stub. Images served from `/content/chapters/chN/image-*.png` (static-site assets).
   - `/login` — sign in form
   - `/register` — sign up form (5 fields with client + server validation)
   - `/dashboard` — **protected** route, redirects to `/login` if not authenticated, shows greeting + stat cards + progress bar + per-chapter list; Continue button links to `/chapters/:id`
@@ -84,9 +84,13 @@ e61ee8c  Add protected /dashboard route with per-chapter progress
 061762d  Add MONDAY_PICKUP.md status doc
 dacb499  Add chapter detail page at /chapters/:id         ← Monday Apr 11
 a05030c  Add Claude Code launch config for frontend dev   ← Monday Apr 11
+c903693  Update MONDAY_PICKUP.md after Monday Apr 11      ← Monday Apr 11
+e48c72e  Add chapter content loader and real Part 107 content ← Monday Apr 11 PM
 ```
 
 All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** is NOT a commit — it was made directly in the DO dashboard. See operational item #18.
+
+**Monday evening also touched the prod DB directly** (no commit) by running `backend/npm run content:load` against the dev Postgres with `DATABASE_URL` exported. This upserted `chapters.content` and set `isPublished = true` for all 13 chapters. Re-running the loader is idempotent — it does not create new rows, just refreshes the content column.
 
 ---
 
@@ -106,9 +110,15 @@ All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** i
 
 7. ~~**The "Continue chapter" button on the dashboard currently links to `/`**, not to a real chapter page, because `/chapters/:id` doesn't exist yet.~~ **Fixed Apr 11** — links to `/chapters/${nextChapter.chapterId}`.
 
-8. **Chapter content is rendered via `dangerouslySetInnerHTML`** in `ChapterDetailPage.tsx` because the seeded content is HTML strings. Fine for now because content only comes from trusted backend writes, but when the admin content editor is built (item #5), sanitize on input OR switch this to a markdown/sanitized renderer. Don't let untrusted user input flow through this path.
+8. **Chapter content is rendered via `dangerouslySetInnerHTML`** in `ChapterDetailPage.tsx` because the content is HTML strings. Fine for now because content only comes from the loader script writing into the DB, but when the admin content editor is built (item #5), sanitize on input OR switch this to a markdown/sanitized renderer. Don't let untrusted user input flow through this path.
 
-9. **Mark Complete button calls `PUT /api/v1/chapters/:id/mark-completed` directly.** Per `ChapterService`, that endpoint may require a pre-existing progress row with `videoWatched: true` — this wasn't verified end-to-end on Monday because I didn't have login credentials. If it 400s on first click from a fresh account, either also hit `mark-watched` first or loosen the backend's precondition.
+9. **Mark Complete button calls `PUT /api/v1/chapters/:id/mark-completed` directly.** Per `ChapterService`, that endpoint may require a pre-existing progress row with `videoWatched: true` — this wasn't verified end-to-end because I didn't have login credentials during testing. If it 400s on first click from a fresh account, either also hit `mark-watched` first or loosen the backend's precondition.
+
+10. **Chapter content loader uses raw `pg` instead of TypeORM's `AppDataSource`.** Reason: importing the `Chapter` entity transitively pulls in `User`, which imports `bcrypt`, which has a broken native binary on the current dev machine (Linux aarch64 .so where a Mac Mach-O should be). The loader only runs a single UPDATE, so a `pg.Client` is simpler than fixing bcrypt. See `backend/src/scripts/loadChapterContent.ts`. If you ever fix bcrypt (`rm -rf node_modules/bcrypt && npm install --build-from-source`, which will need working Xcode CLT), you can switch the loader to use AppDataSource like the rest of the backend.
+
+11. **Chapter images live in `frontend/public/content/chapters/chN/` and are committed to git.** Total ~10MB. They ship with the frontend static-site build, served from `/content/chapters/chN/image-{hash}.{ext}`. The image filenames are content-hashed so re-running the loader with unchanged docx files is a no-op on disk. If a chapter's content changes, the per-chapter directory is wiped and re-populated — old orphan images don't accumulate.
+
+12. **Content loader needs the dev-db `Trusted Sources` toggle off to run from your Mac.** The dev DB under this app has a binary toggle (no IP allow-list), so running the loader locally means disabling Trusted Sources, running, and re-enabling. Always remember to re-enable afterward. When you reach operational item #18 (export DO app spec to `.do/app.yaml`) this becomes a reason to also migrate off the dev-db tier to a full managed cluster that supports IP allow-lists.
 
 ---
 
@@ -116,25 +126,30 @@ All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** i
 
 ### 🔴 High priority (next session)
 
-1. ~~**Chapter detail page at `/chapters/:id`**~~ ✅ **Done Apr 11** (commit `dacb499`). Route is public (not gated by `ProtectedRoute`) so unauthenticated users can browse content; the Mark Complete action itself is auth-gated inside the component. Authenticated flow (Mark Complete POST, Dashboard Continue link) was not verified end-to-end because I didn't have login creds during the session — worth a quick smoke test next time you're logged in.
+1. ~~**Chapter detail page at `/chapters/:id`**~~ ✅ **Done Apr 11** (commit `dacb499`). Route is public; Mark Complete is auth-gated inside the component. Authenticated flow was not verified end-to-end — worth a quick smoke test next time you're logged in.
 
-2. **Real Part 107 chapter content**
-   - Every chapter currently says `"<p>Chapter content coming soon. Check back for video lessons and study materials.</p>"`
-   - Every quiz has 10 placeholder questions named `"Sample Question N for Chapter N?"` with the correct answer always being "Option A (Correct)"
-   - This is a content problem more than a code problem. Decide:
-     - Will you write the content in Markdown / Google Docs / a structured JSON file?
-     - Will you build an admin UI to type it in via the browser?
-     - Will you write a one-time loader script that reads from a file and updates the DB?
-   - Recommend: Markdown files + a one-time loader script, since the content is mostly static text + images + maybe Vimeo embed IDs.
-   - **Estimated:** content authoring is the long pole; loader script is ~1 session
+2. ~~**Real Part 107 chapter content**~~ ✅ **Done Apr 11 PM** (commit `e48c72e`). Loader script `backend/src/scripts/loadChapterContent.ts` reads the 13 `Chapter_N_KDP_Ebook.docx` files from `../../Part 107 Certification Course/` and upserts HTML into `chapters.content`. All 13 chapters rendered with real content on production. Loader is re-runnable whenever the source docx files change — just toggle dev-db Trusted Sources off, run, toggle it back on.
 
-### 🟡 Medium priority (after chapter detail and content)
+### 🟡 Medium priority — now the most important open work
+
+**The natural next move is #3 (quiz UI) + #3b (real quiz questions), because content is landed and quizzes are the only remaining piece of the core learning loop.**
 
 3. **Quiz UI at `/chapters/:id/quiz`**
    - Multiple choice questions, optional timer, submit, results screen with explanations
-   - Calls `POST /api/v1/quizzes/:id/attempt` (or whatever the backend expects — confirm in `backend/src/routes/quizzes.ts`)
-   - Updates the student's progress on success
+   - Calls `POST /api/v1/quizzes/:id/attempt` (confirm the exact shape in `backend/src/routes/quizzes.ts`)
+   - Updates the student's progress on success; wires into the existing `ChapterProgress` table
+   - Activates the currently-disabled "Take quiz" button on `ChapterDetailPage.tsx`
    - **Estimated:** 1-2 sessions
+
+3b. **Real quiz questions** (parallel with or after #3)
+   - Source: `/Users/forrest/claude-code/Part 107 Certification Course/Part 107 Certification Course/Part_107_Practice_Questions_Bank.txt` (68KB plain text file with a bank of practice questions already written)
+   - Current DB state: every quiz has 10 placeholder questions named `"Sample Question N for Chapter N?"` with correct answer always being "Option A (Correct)". Need to replace these.
+   - Approach options:
+     - **Extend the existing loader** (`backend/src/scripts/loadChapterContent.ts`) to also parse the practice questions file and replace `questions` + `question_options` rows for each quiz. Same script, same run pattern.
+     - **Write a separate loader** (`loadQuizQuestions.ts`) so concerns stay separated.
+   - Recommend the extended loader approach since it's one less file and one less command to remember — but only if parsing the .txt format is trivial. Read the first ~200 lines of the file to assess before committing.
+   - Delete-and-recreate semantics for quiz questions (they have no natural key; simplest is to DELETE existing questions+options for each quiz, then INSERT fresh).
+   - **Estimated:** 1 session if the .txt format is clean; 2 sessions if it needs significant massaging.
 
 4. **Forgot password flow**
    - Backend endpoint `POST /api/v1/auth/forgot-password` exists but is stubbed (doesn't actually send email)
@@ -219,23 +234,15 @@ All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** i
 
 ## Recommended next opening move
 
-You have two natural paths depending on where you want to spend your time:
+**Do #3b first (real quiz questions from the practice bank), then #3 (quiz UI).**
 
-**Option A — Content-first (item #2): Real Part 107 chapter content.**
-The app is fully functional but every chapter still says "Chapter content coming soon." Writing real content + a one-time loader script that slurps Markdown files into the DB is the fastest way to make the LMS actually *useful* for students. This is a content-authoring task more than a code task; the loader script itself is ~1 session but the content writing is the long pole. Good choice if you want to dogfood the app yourself.
+Reasoning: the quiz UI needs real questions to even be meaningfully testable. If you build the UI first against placeholder questions you'll just have to re-test it later against real ones. Question loading is probably faster than UI work anyway (~1 session if the .txt parses cleanly), and once real questions are in the DB, the UI work has a much tighter feedback loop.
 
-**Option B — Interactivity-first (item #3): Quiz UI at `/chapters/:id/quiz`.**
-Wires up the one piece of real interactivity left. Backend endpoints already exist. About 1-2 sessions. Good choice if you want to keep the technical momentum going and punt content authoring to later.
+Suggested opening prompt:
 
-Suggested opening prompts:
+> "Pick up from MONDAY_PICKUP.md. Start with item #3b: extend the chapter content loader to also load quiz questions from `Part_107_Practice_Questions_Bank.txt`. Read the file first to understand the format, then plan. After that's working, we'll move to #3 (quiz UI)."
 
-> "Pick up from MONDAY_PICKUP.md. Let's write a Markdown loader script for chapter content — I'll have Markdown files ready at `content/chapters/01-intro.md` etc. Write the loader so I can run it against production once."
-
-Or:
-
-> "Pick up from MONDAY_PICKUP.md. Let's build the quiz UI at /chapters/:id/quiz. Multiple-choice, submit, results screen — hit the existing backend quiz endpoints."
-
-Either one lands somewhere meaningful.
+Don't forget: running the loader against prod means toggling **Trusted Sources off** on the dev-db (DO dashboard → App → dev-db-057722 → Settings → Trusted Sources → Edit → uncheck → Save), running the loader, then toggling it **back on**. Or, better, use the session to finally do operational item #18 and migrate to a real managed cluster so this stops being a recurring chore.
 
 ---
 
@@ -279,8 +286,14 @@ frontend/
 │   │   ├── RegisterPage.tsx
 │   │   └── DashboardPage.tsx       ← protected
 │   └── App.tsx                     ← React Router setup
+├── public/
+│   └── content/chapters/chN/       ← extracted chapter figures (committed to git, ~10MB total)
+└── tailwind.config.js              ← @tailwindcss/typography plugin enabled
+
+backend/src/scripts/
+└── loadChapterContent.ts           ← run via `npm run content:load` (see decision #10)
 ```
 
 ---
 
-Last updated end of day Mon Apr 11, 2026.
+Last updated end of Mon Apr 11, 2026 PM session.
