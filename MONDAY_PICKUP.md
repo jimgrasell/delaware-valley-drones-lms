@@ -86,6 +86,8 @@ dacb499  Add chapter detail page at /chapters/:id         ← Monday Apr 11
 a05030c  Add Claude Code launch config for frontend dev   ← Monday Apr 11
 c903693  Update MONDAY_PICKUP.md after Monday Apr 11      ← Monday Apr 11
 e48c72e  Add chapter content loader and real Part 107 content ← Monday Apr 11 PM
+bad00a0  Update MONDAY_PICKUP.md after Monday PM session  ← Monday Apr 11 PM
+36fed0d  Let admins/instructors bypass chapter progression gate ← Monday Apr 11 PM
 ```
 
 All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** is NOT a commit — it was made directly in the DO dashboard. See operational item #18.
@@ -119,6 +121,8 @@ All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** i
 11. **Chapter images live in `frontend/public/content/chapters/chN/` and are committed to git.** Total ~10MB. They ship with the frontend static-site build, served from `/content/chapters/chN/image-{hash}.{ext}`. The image filenames are content-hashed so re-running the loader with unchanged docx files is a no-op on disk. If a chapter's content changes, the per-chapter directory is wiped and re-populated — old orphan images don't accumulate.
 
 12. **Content loader needs the dev-db `Trusted Sources` toggle off to run from your Mac.** The dev DB under this app has a binary toggle (no IP allow-list), so running the loader locally means disabling Trusted Sources, running, and re-enabling. Always remember to re-enable afterward. When you reach operational item #18 (export DO app spec to `.do/app.yaml`) this becomes a reason to also migrate off the dev-db tier to a full managed cluster that supports IP allow-lists.
+
+13. **Chapter progression gate is admin/instructor-bypassed.** `ChapterService.canAccessChapter` enforces that authenticated users must have `status=completed` on chapter N-1 before accessing chapter N. That's the designed pedagogical flow for students. But admins and instructors bypass the gate in the route (`routes/chapters.ts`) so they can preview/grade any chapter without needing to complete earlier ones. This is enforced by role, not user ID — be careful not to accidentally undo it when refactoring. Consider replicating the bypass in the quizzes route when you build the quiz UI (item #3).
 
 ---
 
