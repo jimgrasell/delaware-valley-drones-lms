@@ -36,10 +36,23 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const chapter = await chapterService.getChapter(req.params.id, req.user?.id);
 
-    // Check if user can access this chapter
-    const canAccess = await chapterService.canAccessChapter(req.params.id, req.user?.id);
-    if (!canAccess && req.user) {
-      throw new AppError('This chapter is not yet available', 403, 'CHAPTER_LOCKED');
+    // Admins and instructors bypass the progression gate entirely —
+    // they need to preview/grade any chapter regardless of completion.
+    const isPrivileged =
+      req.user?.role === 'admin' || req.user?.role === 'instructor';
+
+    if (!isPrivileged) {
+      const canAccess = await chapterService.canAccessChapter(
+        req.params.id,
+        req.user?.id
+      );
+      if (!canAccess && req.user) {
+        throw new AppError(
+          'This chapter is not yet available',
+          403,
+          'CHAPTER_LOCKED'
+        );
+      }
     }
 
     res.json({
