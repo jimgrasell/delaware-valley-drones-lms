@@ -131,7 +131,73 @@ export class PaymentService {
   }
 
   /**
-   * Handle Stripe webhook for successful payment
+   * Handle checkout.session.completed webhook.
+   * This is the most reliable way to confirm payment — the session
+   * metadata contains the userId directly, so we don't need to match
+   * by PaymentIntent ID (which may be null at session creation time
+   * in newer Stripe API versions).
+   */
+  async handleCheckoutSessionCompleted(session: {
+    id: string;
+    payment_intent: string | null;
+    payment_status: string;
+    metadata: Record<string, string>;
+  }) {
+    const userId = session.metadata?.userId;
+    if (!userId) {
+      console.error('Webhook: checkout.session.completed missing userId in metadata');
+      return;
+    }
+
+    if (session.payment_status !== 'paid') {
+      console.log(`Webhook: session ${session.id} payment_status=${session.payment_status}, skipping`);
+      return;
+    }
+
+    // Update the Payment record if we can find it
+    if (session.payment_intent) {
+      const payment = await this.paymentRepository.findOne({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+      });
+
+      if (payment && payment.status === PaymentStatus.PENDING) {
+        payment.status = PaymentStatus.COMPLETED;
+        payment.stripePaymentIntentId = session.payment_intent;
+        payment.completedAt = new Date();
+        await this.paymentRepository.save(payment);
+
+        // Increment coupon usage if applicable
+        if (payment.couponCode) {
+          const coupon = await this.couponRepository.findOne({
+            where: { code: payment.couponCode },
+          });
+          if (coupon) {
+            coupon.timesUsed += 1;
+            await this.couponRepository.save(coupon);
+          }
+        }
+      }
+    }
+
+    // Create enrollment (idempotent — skip if already enrolled)
+    const existingEnrollment = await this.enrollmentRepository.findOne({
+      where: { studentId: userId, status: EnrollmentStatus.ACTIVE },
+    });
+
+    if (!existingEnrollment) {
+      const enrollment = this.enrollmentRepository.create({
+        studentId: userId,
+        status: EnrollmentStatus.ACTIVE,
+      });
+      await this.enrollmentRepository.save(enrollment);
+      console.log(`Webhook: enrollment created for user ${userId}`);
+    }
+  }
+
+  /**
+   * Handle Stripe webhook for successful payment (legacy — kept for
+   * backwards compatibility but checkout.session.completed is preferred)
    */
   async handlePaymentIntentSucceeded(paymentIntentId: string) {
     const payment = await this.paymentRepository.findOne({
@@ -140,10 +206,12 @@ export class PaymentService {
     });
 
     if (!payment) {
-      throw new AppError('Payment not found', 404, 'PAYMENT_NOT_FOUND');
+      // Don't throw — checkout.session.completed handler already
+      // creates the enrollment. Just log and return.
+      console.log(`Webhook: payment_intent.succeeded for ${paymentIntentId} — no matching Payment record (handled by checkout.session.completed)`);
+      return;
     }
 
-    // Mark payment as completed
     payment.status = PaymentStatus.COMPLETED;
     payment.completedAt = new Date();
     await this.paymentRepository.save(payment);
@@ -157,18 +225,14 @@ export class PaymentService {
       enrollment = this.enrollmentRepository.create({
         studentId: payment.userId,
         status: EnrollmentStatus.ACTIVE,
-        createdAt: new Date(),
       });
-
       await this.enrollmentRepository.save(enrollment);
     }
 
-    // Increment coupon usage if applicable
     if (payment.couponCode) {
       const coupon = await this.couponRepository.findOne({
         where: { code: payment.couponCode },
       });
-
       if (coupon) {
         coupon.timesUsed += 1;
         await this.couponRepository.save(coupon);

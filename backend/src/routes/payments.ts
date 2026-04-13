@@ -118,6 +118,17 @@ router.post(
 
     // Handle different event types
     switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await paymentService.handleCheckoutSessionCompleted({
+          id: session.id,
+          payment_intent: session.payment_intent as string | null,
+          payment_status: session.payment_status || '',
+          metadata: (session.metadata || {}) as Record<string, string>,
+        });
+        break;
+      }
+
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         await paymentService.handlePaymentIntentSucceeded(paymentIntent.id);
