@@ -18,7 +18,8 @@
     "migrate:show": "typeorm migration:show -d dist/config/database.js",
     "migrate:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.ts",
     "migrate:create": "typeorm migration:create",
-    "content:load": "ts-node src/scripts/loadChapterContent.ts"
+    "content:load": "ts-node src/scripts/loadChapterContent.ts",
+    "quiz:load": "ts-node src/scripts/loadQuizQuestions.ts"
   },
   "dependencies": {
     "aws-sdk": "^2.1400.0",
