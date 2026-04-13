@@ -41,7 +41,7 @@ type Phase =
   | { kind: 'taking'; quiz: QuizStart; selected: Map<string, string> }
   | { kind: 'submitting' }
   | { kind: 'results'; result: QuizResult; quiz: QuizStart }
-  | { kind: 'review'; result: QuizResult; details: AttemptResults };
+  | { kind: 'review'; result: QuizResult; details: AttemptResults; quiz: QuizStart };
 
 function QuizPage() {
   const { chapterId } = useParams<{ chapterId: string }>();
@@ -98,11 +98,11 @@ function QuizPage() {
   }, []);
 
   // Load detailed review
-  const handleViewReview = useCallback(async (result: QuizResult) => {
+  const handleViewReview = useCallback(async (result: QuizResult, quiz: QuizStart) => {
     setPhase({ kind: 'loading' });
     try {
       const details = await quizzesApi.getAttemptResults(result.attemptId);
-      setPhase({ kind: 'review', result, details });
+      setPhase({ kind: 'review', result, details, quiz });
     } catch (err) {
       setPhase({ kind: 'error', message: extractError(err, 'Failed to load review.') });
     }
@@ -148,13 +148,13 @@ function QuizPage() {
         <ResultsPhase
           result={phase.result}
           chapterId={chapterId!}
-          onViewReview={handleViewReview}
+          onViewReview={(r) => handleViewReview(r, phase.quiz)}
           onRetake={() => handleStart(phase.quiz.quizId)}
         />
       )}
 
       {phase.kind === 'review' && (
-        <ReviewPhase result={phase.result} details={phase.details} chapterId={chapterId!} />
+        <ReviewPhase result={phase.result} details={phase.details} quiz={phase.quiz} chapterId={chapterId!} />
       )}
     </div>
   );
@@ -432,12 +432,21 @@ function ResultsPhase({
 function ReviewPhase({
   result,
   details,
+  quiz,
   chapterId,
 }: {
   result: QuizResult;
   details: AttemptResults;
+  quiz: QuizStart;
   chapterId: string;
 }) {
+  // Build a lookup: optionId → optionText from the quiz questions
+  const optionTextMap = new Map<string, string>();
+  for (const q of quiz.questions) {
+    for (const opt of q.options) {
+      optionTextMap.set(opt.id, opt.optionText);
+    }
+  }
   return (
     <div>
       {/* Summary bar */}
@@ -484,9 +493,7 @@ function ReviewPhase({
             {ans.selectedOptionId && (
               <p className="ml-8 text-sm text-slate-600">
                 <span className="font-medium">Your answer:</span>{' '}
-                {/* The selectedOptionId is an ID — the review endpoint may or may not include the text.
-                    We show what we have. */}
-                {ans.answerText || ans.selectedOptionId}
+                {optionTextMap.get(ans.selectedOptionId) || ans.answerText || 'No answer'}
                 {ans.isCorrect ? (
                   <span className="ml-1 text-emerald-600 font-medium"> — Correct</span>
                 ) : (
