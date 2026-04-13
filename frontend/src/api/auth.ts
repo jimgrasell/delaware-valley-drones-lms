@@ -104,4 +104,25 @@ export const authApi = {
     );
     return data;
   },
+
+  updateProfile: async (profile: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string | null;
+    bio?: string | null;
+  }): Promise<User> => {
+    const { data } = await apiClient.put<{ success: boolean; user: User }>(
+      '/auth/profile',
+      profile
+    );
+    return data.user;
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const { data } = await apiClient.put<{ success: boolean; message: string }>(
+      '/auth/change-password',
+      { currentPassword, newPassword }
+    );
+    return data;
+  },
 };

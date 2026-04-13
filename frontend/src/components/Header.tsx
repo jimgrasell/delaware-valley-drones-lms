@@ -40,14 +40,17 @@ function Header() {
                 Admin
               </Link>
             )}
-            <div className="hidden sm:flex flex-col items-end leading-tight">
+            <Link
+              to="/profile"
+              className="hidden sm:flex flex-col items-end leading-tight hover:opacity-80 transition"
+            >
               <span className="text-sm font-medium">
                 {user.firstName} {user.lastName}
               </span>
               <span className="text-xs text-white/70 capitalize">
                 {user.role}
               </span>
-            </div>
+            </Link>
             <button
               type="button"
               onClick={handleLogout}
