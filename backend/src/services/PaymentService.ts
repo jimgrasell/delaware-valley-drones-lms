@@ -60,8 +60,8 @@ export class PaymentService {
             currency: 'usd',
             product_data: {
               name: 'FAA Part 107 Remote Pilot Certification Course',
-              description: 'Complete online course with 13 chapters, 113+ quiz questions, and lifetime access',
-              images: [process.env.COURSE_IMAGE_URL || ''],
+              description: 'Complete online course with 13 chapters, 142 practice questions, and lifetime access',
+              ...(process.env.COURSE_IMAGE_URL ? { images: [process.env.COURSE_IMAGE_URL] } : {}),
             },
             unit_amount: amount,
           },
