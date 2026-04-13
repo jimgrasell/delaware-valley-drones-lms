@@ -32,6 +32,14 @@ function Header() {
             >
               Dashboard
             </Link>
+            {user.role === 'admin' && (
+              <Link
+                to="/admin"
+                className="hidden sm:inline-block text-sm bg-white/10 hover:bg-white/20 transition rounded px-3 py-1.5"
+              >
+                Admin
+              </Link>
+            )}
             <div className="hidden sm:flex flex-col items-end leading-tight">
               <span className="text-sm font-medium">
                 {user.firstName} {user.lastName}
