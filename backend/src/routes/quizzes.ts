@@ -39,7 +39,7 @@ router.get(
  */
 router.post(
   '/:id/submit',
-  requireRole('student'),
+  requireRole(['student', 'instructor', 'admin']),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const quizId = req.params.id;
     const userId = req.user!.id;
@@ -77,7 +77,7 @@ router.post(
  */
 router.get(
   '/:id/attempts',
-  requireRole('student'),
+  requireRole(['student', 'instructor', 'admin']),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const quizId = req.params.id;
     const userId = req.user!.id;
@@ -100,7 +100,7 @@ router.get(
  */
 router.get(
   '/attempts/:attemptId/results',
-  requireRole('student'),
+  requireRole(['student', 'instructor', 'admin']),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const attemptId = req.params.attemptId;
     const userId = req.user!.id;
