@@ -48,7 +48,7 @@ router.get(
     }
 
     const coupon = await paymentService.validateCoupon(code);
-    const coursePrice = 9999; // $99.99 in cents
+    const coursePrice = 9900; // $99.00 in cents
     const discount =
       coupon.type === 'percentage'
         ? Math.round(coursePrice * (coupon.value / 100))

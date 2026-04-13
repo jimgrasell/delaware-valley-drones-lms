@@ -42,7 +42,9 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // Middleware
 // ============================================
 
-// Body parsing
+// Body parsing — raw body for Stripe webhook signature verification,
+// JSON for everything else.
+app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 

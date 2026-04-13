@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16' as any,
 });
 
-const COURSE_PRICE_CENTS = 9999; // $99.99
+const COURSE_PRICE_CENTS = 9900; // $99.00
 
 export class PaymentService {
   private paymentRepository = AppDataSource.getRepository(Payment);

@@ -53,12 +53,14 @@ function ChaptersPage() {
               instruction, video lectures, and 142 practice questions to get you
               certified on your first attempt.
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <p className="mt-6 text-3xl font-bold text-white">$99</p>
+            <p className="text-sm text-white/70">one-time payment, lifetime access</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
               <Link
                 to="/register"
                 className="rounded-md bg-white px-6 py-3 text-sm font-semibold text-brand shadow transition hover:bg-white/90"
               >
-                Start learning free
+                Get started
               </Link>
               <Link
                 to="/login"
@@ -143,13 +145,13 @@ function ChaptersPage() {
                   Ready to get certified?
                 </h3>
                 <p className="mt-2 text-slate-600">
-                  Sign up today and start your journey to becoming an FAA-certified remote pilot.
+                  Enroll today for $99 and start your journey to becoming an FAA-certified remote pilot.
                 </p>
                 <Link
                   to="/register"
                   className="mt-4 inline-block rounded-md bg-brand px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-brand-light"
                 >
-                  Create your account
+                  Enroll for $99
                 </Link>
               </div>
             )}
