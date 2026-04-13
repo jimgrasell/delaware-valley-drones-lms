@@ -21,8 +21,22 @@ function App() {
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<ChaptersPage />} />
-            <Route path="/chapters/:id" element={<ChapterDetailPage />} />
-            <Route path="/chapters/:chapterId/quiz" element={<QuizPage />} />
+            <Route
+              path="/chapters/:id"
+              element={
+                <ProtectedRoute>
+                  <ChapterDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chapters/:chapterId/quiz"
+              element={
+                <ProtectedRoute>
+                  <QuizPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
