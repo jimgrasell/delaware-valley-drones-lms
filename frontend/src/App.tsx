@@ -5,6 +5,8 @@ import ChaptersPage from './pages/ChaptersPage';
 import ChapterDetailPage from './pages/ChapterDetailPage';
 import QuizPage from './pages/QuizPage';
 import LoginPage from './pages/LoginPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 
@@ -20,6 +22,8 @@ function App() {
             <Route path="/chapters/:id" element={<ChapterDetailPage />} />
             <Route path="/chapters/:chapterId/quiz" element={<QuizPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route
               path="/dashboard"

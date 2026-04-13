@@ -158,17 +158,60 @@ router.post(
       throw new AppError('Email is required', 400, 'VALIDATION_ERROR');
     }
 
-    const user = await authService.findUserByEmail(email);
+    const token = await authService.generatePasswordResetToken(email);
 
-    // Don't reveal if user exists (security best practice)
-    if (user) {
-      // TODO: Implement password reset email logic
-      logger.info(`Password reset requested for: ${email}`);
+    if (token) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+      if (process.env.POSTMARK_API_KEY) {
+        try {
+          const { emailService } = await import('../services/EmailService');
+          const user = await authService.findUserByEmail(email);
+          await emailService.sendPasswordResetEmail(
+            email,
+            user?.firstName || 'there',
+            resetUrl
+          );
+        } catch (err) {
+          logger.error({ err }, 'Failed to send password reset email');
+        }
+      } else {
+        // No email provider configured — log the URL for dev/test convenience
+        logger.info(`[DEV] Password reset URL for ${email}: ${resetUrl}`);
+      }
     }
 
+    // Always return generic success (don't reveal if user exists)
     res.json({
       success: true,
       message: 'If an account exists with that email, a password reset link has been sent',
+    });
+  })
+);
+
+/**
+ * PUT /api/v1/auth/reset-password
+ * Reset password using a token from the forgot-password email
+ */
+router.put(
+  '/reset-password',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      throw new AppError('Token and new password are required', 400, 'VALIDATION_ERROR');
+    }
+
+    if (newPassword.length < 8) {
+      throw new AppError('Password must be at least 8 characters', 400, 'VALIDATION_ERROR');
+    }
+
+    await authService.resetPassword(token, newPassword);
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully',
     });
   })
 );

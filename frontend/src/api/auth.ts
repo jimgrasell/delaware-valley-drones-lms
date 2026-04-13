@@ -88,4 +88,20 @@ export const authApi = {
       // ignore
     }
   },
+
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const { data } = await apiClient.post<{ success: boolean; message: string }>(
+      '/auth/forgot-password',
+      { email }
+    );
+    return data;
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+    const { data } = await apiClient.put<{ success: boolean; message: string }>(
+      '/auth/reset-password',
+      { token, newPassword }
+    );
+    return data;
+  },
 };

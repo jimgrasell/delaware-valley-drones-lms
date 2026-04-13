@@ -1,4 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
+import crypto from 'crypto';
+import { MoreThan } from 'typeorm';
 import { User, UserRole } from '../models/User';
 import { AppDataSource } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
@@ -201,6 +203,49 @@ export class AuthService {
     await this.userRepository.update(userId, {
       lastLoginAt: new Date(),
     });
+  }
+
+  /**
+   * Generate a password reset token and save it on the user.
+   * Returns the raw token (to be embedded in the reset URL).
+   * Returns null if the email doesn't match any user — caller
+   * should still return a generic success message for security.
+   */
+  async generatePasswordResetToken(email: string): Promise<string | null> {
+    const user = await this.findUserByEmail(email);
+    if (!user) return null;
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    user.passwordResetToken = token;
+    user.passwordResetExpiry = expiry;
+    await this.userRepository.save(user);
+
+    return token;
+  }
+
+  /**
+   * Validate a reset token and set the new password.
+   * Throws if the token is invalid or expired.
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpiry: MoreThan(new Date()),
+      },
+    });
+
+    if (!user) {
+      throw new AppError('Invalid or expired reset token', 400, 'INVALID_RESET_TOKEN');
+    }
+
+    // Setting passwordHash triggers the @BeforeUpdate bcrypt hook
+    user.passwordHash = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpiry = undefined;
+    await this.userRepository.save(user);
   }
 }
 

@@ -119,7 +119,13 @@ function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-slate-600">
+          <div className="mt-4 text-center text-sm">
+            <Link to="/forgot-password" className="text-brand hover:text-brand-dark">
+              Forgot your password?
+            </Link>
+          </div>
+
+          <div className="mt-3 text-center text-sm text-slate-600">
             Don&apos;t have an account?{' '}
             <Link to="/register" className="text-brand hover:text-brand-dark">
               Create one
