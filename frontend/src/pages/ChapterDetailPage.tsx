@@ -148,6 +148,22 @@ function ChapterContent({
         </div>
       </div>
 
+      {/* Video lecture */}
+      {chapter.videoVimeoId && (
+        <div className="mb-6 overflow-hidden rounded-lg border border-slate-200 bg-black shadow-sm">
+          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+            <iframe
+              src={`https://player.vimeo.com/video/${chapter.videoVimeoId}?badge=0&autopause=0&player_id=0`}
+              className="absolute inset-0 h-full w-full"
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title={`Chapter ${chapter.chapterNumber} video lecture`}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Chapter body content */}
       <article
         className="prose prose-slate max-w-none rounded-lg border border-slate-200 bg-white p-6 shadow-sm"

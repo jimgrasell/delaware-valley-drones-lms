@@ -26,16 +26,19 @@ function ChaptersTab() {
     return () => { cancelled = true; };
   }, []);
 
-  const handleSave = async (id: string, title: string, description: string) => {
+  const handleSave = async (id: string, title: string, description: string, videoVimeoId: string) => {
     try {
-      await adminApi.updateChapter(id, { title, description });
-      // Refresh the list
+      await adminApi.updateChapter(id, {
+        title,
+        description,
+        videoVimeoId: videoVimeoId || undefined,
+      });
       setState((prev) => {
         if (prev.kind !== 'success') return prev;
         return {
           ...prev,
           chapters: prev.chapters.map((ch) =>
-            ch.id === id ? { ...ch, title, description } : ch
+            ch.id === id ? { ...ch, title, description, videoVimeoId: videoVimeoId || null } : ch
           ),
         };
       });
@@ -114,16 +117,17 @@ function ChapterEditForm({
   onCancel,
 }: {
   chapter: Chapter;
-  onSave: (id: string, title: string, description: string) => void;
+  onSave: (id: string, title: string, description: string, videoVimeoId: string) => void;
   onCancel: () => void;
 }) {
   const [title, setTitle] = useState(chapter.title);
   const [description, setDescription] = useState(chapter.description);
+  const [videoVimeoId, setVideoVimeoId] = useState(chapter.videoVimeoId || '');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
     setSaving(true);
-    await onSave(chapter.id, title, description);
+    await onSave(chapter.id, title, description, videoVimeoId);
     setSaving(false);
   };
 
@@ -144,6 +148,19 @@ function ChapterEditForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          Vimeo Video ID
+          <span className="ml-1 font-normal text-slate-400">(number from vimeo.com/123456789)</span>
+        </label>
+        <input
+          type="text"
+          value={videoVimeoId}
+          onChange={(e) => setVideoVimeoId(e.target.value)}
+          placeholder="e.g. 123456789"
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
