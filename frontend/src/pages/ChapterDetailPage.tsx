@@ -177,14 +177,18 @@ function ChapterContent({
           </span>
         )}
 
-        <button
-          type="button"
-          disabled
-          className="cursor-not-allowed rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-400"
-          title="Quiz UI coming soon"
-        >
-          Take quiz ({chapter.quizCount})
-        </button>
+        {isAuthenticated && chapter.quizCount > 0 ? (
+          <Link
+            to={`/chapters/${chapter.id}/quiz`}
+            className="rounded-md border border-brand bg-white px-4 py-2 text-sm font-medium text-brand shadow-sm transition hover:bg-brand hover:text-white"
+          >
+            Take quiz ({chapter.quizCount})
+          </Link>
+        ) : chapter.quizCount > 0 ? (
+          <span className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-400">
+            Take quiz ({chapter.quizCount})
+          </span>
+        ) : null}
 
         {!isAuthenticated && (
           <Link

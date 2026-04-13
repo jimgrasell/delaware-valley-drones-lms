@@ -3,6 +3,7 @@ import Header from './components/Header';
 import ProtectedRoute from './components/ProtectedRoute';
 import ChaptersPage from './pages/ChaptersPage';
 import ChapterDetailPage from './pages/ChapterDetailPage';
+import QuizPage from './pages/QuizPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -17,6 +18,7 @@ function App() {
           <Routes>
             <Route path="/" element={<ChaptersPage />} />
             <Route path="/chapters/:id" element={<ChapterDetailPage />} />
+            <Route path="/chapters/:chapterId/quiz" element={<QuizPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route
