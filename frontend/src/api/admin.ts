@@ -39,14 +39,11 @@ export interface StudentSummary {
   email: string;
   createdAt: string;
   status: string;
-  completionStats: {
-    completedChapters: number;
-    totalChapters: number;
-    completionPercentage: number;
-    passedQuizzes: number;
-    totalAttempts: number;
-    averageScore: number;
-  };
+  completedChapters: number;
+  totalChapters: number;
+  completionPercentage: number;
+  passedQuizzes: number;
+  averageQuizScore: number;
 }
 
 export interface StudentChapterProgress {
@@ -66,14 +63,11 @@ export interface StudentDetail {
   email: string;
   createdAt: string;
   status: string;
-  completionStats: {
-    completedChapters: number;
-    totalChapters: number;
-    completionPercentage: number;
-    passedQuizzes: number;
-    totalAttempts: number;
-    averageScore: number;
-  };
+  completedChapters: number;
+  totalChapters: number;
+  completionPercentage: number;
+  passedQuizzes: number;
+  averageQuizScore: number;
   chapterProgress: StudentChapterProgress[];
 }
 

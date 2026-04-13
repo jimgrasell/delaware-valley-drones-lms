@@ -141,7 +141,6 @@ function StudentRow({
   detailLoading: boolean;
   onToggle: () => void;
 }) {
-  const { completionStats } = student;
   return (
     <>
       <tr
@@ -151,11 +150,11 @@ function StudentRow({
         <td className="px-4 py-3 font-medium text-slate-900">{student.name}</td>
         <td className="px-4 py-3 text-slate-600">{student.email}</td>
         <td className="px-4 py-3 text-right text-slate-700">
-          {completionStats.completedChapters}/{completionStats.totalChapters}
-          <span className="ml-1 text-slate-400">({completionStats.completionPercentage}%)</span>
+          {student.completedChapters}/{student.totalChapters}
+          <span className="ml-1 text-slate-400">({Math.round(student.completionPercentage)}%)</span>
         </td>
         <td className="px-4 py-3 text-right text-slate-700">
-          {Math.round(completionStats.averageScore)}%
+          {Math.round(student.averageQuizScore)}%
         </td>
         <td className="px-4 py-3 text-right text-slate-500">
           {new Date(student.createdAt).toLocaleDateString()}
