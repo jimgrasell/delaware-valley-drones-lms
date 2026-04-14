@@ -1,0 +1,123 @@
+# DigitalOcean App Platform spec for delaware-valley-drones-lms-app
+#
+# Exported via: doctl apps spec get <app-id>
+# Last updated: April 13, 2026
+#
+# IMPORTANT: Secret values have been replaced with placeholders.
+# To deploy from this spec, set the actual values via the DO dashboard
+# or doctl CLI. Do NOT commit real secrets to git.
+#
+# Usage:
+#   doctl apps update <app-id> --spec .do/app.yaml
+
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+
+databases:
+- engine: PG
+  name: dev-db-057722
+  version: "17"
+
+domains:
+- domain: learn.delawarevalleydrones.com
+  type: PRIMARY
+
+envs:
+- key: DB_SYNCHRONIZE
+  scope: RUN_AND_BUILD_TIME
+  value: "false"
+- key: JWT_SECRET
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: REPLACE_WITH_JWT_SECRET
+- key: REFRESH_TOKEN_SECRET
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: REPLACE_WITH_REFRESH_TOKEN_SECRET
+
+features:
+- buildpack-stack=ubuntu-22
+
+ingress:
+  rules:
+  - component:
+      name: delaware-valley-drones-lms-front
+    match:
+      authority: {}
+      path:
+        prefix: /
+  - component:
+      name: delaware-valley-drones-lms-backe
+      preserve_path_prefix: true
+    match:
+      authority: {}
+      path:
+        prefix: /api
+
+jobs:
+- environment_slug: node-js
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: jimgrasell/delaware-valley-drones-lms
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-1gb
+  kind: PRE_DEPLOY
+  name: pre-deploy-migrate
+  run_command: npm run migrate:up
+  source_dir: backend
+
+name: delaware-valley-drones-lms-app
+region: nyc
+
+services:
+- environment_slug: node-js
+  envs:
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    value: ${dev-db-057722.DATABASE_URL}
+  - key: FRONTEND_URL
+    scope: RUN_AND_BUILD_TIME
+    value: https://learn.delawarevalleydrones.com
+  - key: POSTMARK_API_KEY
+    scope: RUN_AND_BUILD_TIME
+    value: REPLACE_WITH_POSTMARK_API_KEY
+  - key: FROM_EMAIL
+    scope: RUN_AND_BUILD_TIME
+    value: noreply@delawarevalleydrones.com
+  - key: STRIPE_SECRET_KEY
+    scope: RUN_AND_BUILD_TIME
+    value: REPLACE_WITH_STRIPE_SECRET_KEY
+  - key: STRIPE_WEBHOOK_SECRET
+    scope: RUN_AND_BUILD_TIME
+    value: REPLACE_WITH_STRIPE_WEBHOOK_SECRET
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: jimgrasell/delaware-valley-drones-lms
+  http_port: 8080
+  instance_count: 2
+  instance_size_slug: apps-s-1vcpu-1gb
+  name: delaware-valley-drones-lms-backe
+  run_command: npm start
+  source_dir: backend
+
+static_sites:
+- build_command: npm install && npm run build
+  catchall_document: index.html
+  environment_slug: node-js
+  envs:
+  - key: VITE_API_URL
+    scope: BUILD_TIME
+    value: https://learn.delawarevalleydrones.com/api/v1
+  - key: VITE_STRIPE_PUBLIC_KEY
+    scope: BUILD_TIME
+    value: REPLACE_WITH_STRIPE_PUBLISHABLE_KEY
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: jimgrasell/delaware-valley-drones-lms
+  name: delaware-valley-drones-lms-front
+  output_dir: dist
+  source_dir: /frontend
