@@ -167,6 +167,21 @@ function DashboardContent({ data }: { data: ProgressData }) {
         </div>
       </div>
 
+      {/* Certificate CTA — show when course is complete */}
+      {everythingDone && (
+        <div className="mb-8 rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-center">
+          <p className="text-lg font-semibold text-emerald-800">
+            Congratulations! You've completed the course.
+          </p>
+          <Link
+            to="/certificate"
+            className="mt-3 inline-block rounded-md bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow transition hover:bg-emerald-700"
+          >
+            View your certificate
+          </Link>
+        </div>
+      )}
+
       {/* Continue CTA */}
       {nextChapter && (
         <div className="mb-8 rounded-lg border border-brand/20 bg-brand/5 p-5">

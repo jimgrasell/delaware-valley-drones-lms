@@ -13,6 +13,8 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import ForumPage from './pages/ForumPage';
 import ForumPostPage from './pages/ForumPostPage';
+import CertificatePage from './pages/CertificatePage';
+import VerifyCertificatePage from './pages/VerifyCertificatePage';
 import CheckoutPage from './pages/CheckoutPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentCancelledPage from './pages/PaymentCancelledPage';
@@ -48,6 +50,15 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forum" element={<ForumPage />} />
             <Route path="/forum/:id" element={<ForumPostPage />} />
+            <Route
+              path="/certificate"
+              element={
+                <ProtectedRoute>
+                  <CertificatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/verify/:verificationId" element={<VerifyCertificatePage />} />
             <Route
               path="/checkout"
               element={
