@@ -13,7 +13,7 @@
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "type-check": "tsc --noEmit",
-    "migrate:up": "typeorm migration:run -d dist/config/database.js",
+    "migrate:up": "node -e \"var ds=require('./dist/config/database').default;ds.initialize().then(function(){return ds.runMigrations()}).then(function(){console.log('Migrations complete');process.exit(0)}).catch(function(e){console.error(e);process.exit(1)})\"",
     "migrate:down": "typeorm migration:revert -d dist/config/database.js",
     "migrate:show": "typeorm migration:show -d dist/config/database.js",
     "migrate:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.ts",
