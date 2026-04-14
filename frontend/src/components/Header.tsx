@@ -32,6 +32,12 @@ function Header() {
             >
               Dashboard
             </Link>
+            <Link
+              to="/forum"
+              className="hidden sm:inline-block text-sm bg-white/10 hover:bg-white/20 transition rounded px-3 py-1.5"
+            >
+              Forum
+            </Link>
             {user.role === 'student' && (
               <Link
                 to="/checkout"
