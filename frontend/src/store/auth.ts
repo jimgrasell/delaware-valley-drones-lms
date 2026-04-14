@@ -6,7 +6,7 @@ import {
   type AuthTokens,
   type RegisterPayload,
 } from '../api/auth';
-import { setAccessToken } from '../api/token';
+import { setAccessToken, setRefreshToken } from '../api/token';
 
 // Persisted shape — only the fields we want to survive a page reload.
 // Avoid persisting derived state or methods.
@@ -65,9 +65,10 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.login(email, password);
           const tokens: AuthTokens = response.tokens;
 
-          // Push the access token into the in-memory holder so the
-          // axios interceptor can attach it to subsequent requests.
+          // Push tokens into the in-memory holder so the axios
+          // interceptors can attach/refresh them.
           setAccessToken(tokens.accessToken);
+          setRefreshToken(tokens.refreshToken);
 
           set({
             user: response.user,
@@ -91,11 +92,8 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.register(payload);
           const tokens: AuthTokens = response.tokens;
 
-          // Backend auto-logs the user in on successful registration —
-          // it returns a full token pair, same shape as login. Treat it
-          // identically: push the access token into the in-memory holder
-          // and persist user + tokens.
           setAccessToken(tokens.accessToken);
+          setRefreshToken(tokens.refreshToken);
 
           set({
             user: response.user,
@@ -118,6 +116,7 @@ export const useAuthStore = create<AuthState>()(
         // regardless of the result.
         await authApi.logout();
         setAccessToken(null);
+        setRefreshToken(null);
         set({
           user: null,
           accessToken: null,
@@ -146,6 +145,9 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (rehydratedState) => {
         if (rehydratedState?.accessToken) {
           setAccessToken(rehydratedState.accessToken);
+        }
+        if (rehydratedState?.refreshToken) {
+          setRefreshToken(rehydratedState.refreshToken);
         }
       },
     }

@@ -1,5 +1,5 @@
-import axios, { AxiosError } from 'axios';
-import { getAccessToken, setAccessToken } from './token';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { getAccessToken, setAccessToken, getRefreshToken, setRefreshToken } from './token';
 
 // VITE_API_URL is set per-environment:
 //   - local dev: leave unset (or "/api/v1") and Vite proxies /api to the
@@ -32,27 +32,115 @@ apiClient.interceptors.request.use((config) => {
 });
 
 // ---------------------------------------------------------------------------
-// Response interceptor: on 401, clear local auth state and let the caller
-// see the error. Components can render an error message and redirect.
-//
-// We don't try to refresh the token here yet — that's a future iteration.
-// Default access token lifetime on the backend is 24h, so it's not urgent.
+// Response interceptor: on 401, attempt a transparent token refresh using
+// the refresh token. If refresh succeeds, retry the original request.
+// If refresh fails, clear auth and let the caller handle the error.
 // ---------------------------------------------------------------------------
+
+let isRefreshing = false;
+let refreshQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}> = [];
+
+function processQueue(token: string | null, error: unknown = null) {
+  for (const { resolve, reject } of refreshQueue) {
+    if (token) resolve(token);
+    else reject(error);
+  }
+  refreshQueue = [];
+}
+
+function clearAuth() {
+  setAccessToken(null);
+  setRefreshToken(null);
+  try {
+    localStorage.removeItem('dvd-lms-auth');
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      setAccessToken(null);
-      // Best-effort: nudge any persisted auth state. We can't import the
-      // store here (circular), so the LoginPage / route guards in callers
-      // are responsible for redirecting.
-      try {
-        localStorage.removeItem('dvd-lms-auth');
-      } catch {
-        // localStorage may be unavailable in some environments
-      }
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Only attempt refresh on 401, and only once per request
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    // Don't try to refresh the refresh call itself
+    if (originalRequest.url?.includes('/auth/refresh')) {
+      clearAuth();
+      return Promise.reject(error);
+    }
+
+    const currentRefreshToken = getRefreshToken();
+    if (!currentRefreshToken) {
+      clearAuth();
+      return Promise.reject(error);
+    }
+
+    // If already refreshing, queue this request
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        refreshQueue.push({
+          resolve: (token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            originalRequest._retry = true;
+            resolve(apiClient(originalRequest));
+          },
+          reject,
+        });
+      });
+    }
+
+    isRefreshing = true;
+    originalRequest._retry = true;
+
+    try {
+      // Use plain axios (not apiClient) to avoid interceptor loop
+      const { data } = await axios.post(`${baseURL}/auth/refresh`, {
+        refreshToken: currentRefreshToken,
+      });
+
+      const newAccessToken = data.tokens?.accessToken;
+      const newRefreshToken = data.tokens?.refreshToken;
+
+      if (!newAccessToken) {
+        throw new Error('No access token in refresh response');
+      }
+
+      setAccessToken(newAccessToken);
+      if (newRefreshToken) setRefreshToken(newRefreshToken);
+
+      // Update persisted store
+      try {
+        const stored = localStorage.getItem('dvd-lms-auth');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          parsed.state.accessToken = newAccessToken;
+          if (newRefreshToken) parsed.state.refreshToken = newRefreshToken;
+          localStorage.setItem('dvd-lms-auth', JSON.stringify(parsed));
+        }
+      } catch {
+        // non-critical
+      }
+
+      processQueue(newAccessToken);
+
+      // Retry original request with new token
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      processQueue(null, refreshError);
+      clearAuth();
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
