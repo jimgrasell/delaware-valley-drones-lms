@@ -78,6 +78,28 @@ export interface Pagination {
   pages: number;
 }
 
+export interface CouponData {
+  id: string;
+  code: string;
+  description: string;
+  type: 'percentage' | 'fixed_amount';
+  value: number;
+  usageLimit: number;
+  timesUsed: number;
+  isActive: boolean;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface CouponCreate {
+  code: string;
+  description: string;
+  type: 'percentage' | 'fixed_amount';
+  value: number;
+  usageLimit?: number;
+  expiresAt?: string;
+}
+
 export interface ChapterUpdate {
   title?: string;
   description?: string;
@@ -119,5 +141,33 @@ export const adminApi = {
 
   updateChapter: async (id: string, update: ChapterUpdate): Promise<void> => {
     await apiClient.put(`/admin/chapters/${id}`, update);
+  },
+
+  getCoupons: async (): Promise<CouponData[]> => {
+    const { data } = await apiClient.get<{
+      success: boolean;
+      data: { coupons: CouponData[] };
+    }>('/admin/coupons');
+    return data.data.coupons;
+  },
+
+  createCoupon: async (coupon: CouponCreate): Promise<CouponData> => {
+    const { data } = await apiClient.post<{ success: boolean; data: CouponData }>(
+      '/admin/coupons',
+      coupon
+    );
+    return data.data;
+  },
+
+  updateCoupon: async (id: string, update: Partial<CouponCreate> & { isActive?: boolean }): Promise<CouponData> => {
+    const { data } = await apiClient.put<{ success: boolean; data: CouponData }>(
+      `/admin/coupons/${id}`,
+      update
+    );
+    return data.data;
+  },
+
+  deleteCoupon: async (id: string): Promise<void> => {
+    await apiClient.delete(`/admin/coupons/${id}`);
   },
 };

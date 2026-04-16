@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import DashboardTab from './admin/DashboardTab';
 import StudentsTab from './admin/StudentsTab';
 import ChaptersTab from './admin/ChaptersTab';
+import CouponsTab from './admin/CouponsTab';
 
-const TABS = ['dashboard', 'students', 'chapters'] as const;
+const TABS = ['dashboard', 'students', 'chapters', 'coupons'] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
   dashboard: 'Dashboard',
   students: 'Students',
   chapters: 'Chapters',
+  coupons: 'Coupons',
 };
 
 function getTabFromHash(): Tab {
@@ -64,6 +66,7 @@ function AdminPage() {
       {tab === 'dashboard' && <DashboardTab />}
       {tab === 'students' && <StudentsTab />}
       {tab === 'chapters' && <ChaptersTab />}
+      {tab === 'coupons' && <CouponsTab />}
     </div>
   );
 }

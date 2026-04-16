@@ -1,7 +1,9 @@
 import { Router, Response } from 'express';
 import { AuthRequest, authMiddleware, requireRole } from '../middleware/auth';
-import { asyncHandler } from '../middleware/errorHandler';
+import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { adminService } from '../services/AdminService';
+import { AppDataSource } from '../config/database';
+import { Coupon } from '../models/Coupon';
 
 const router = Router();
 
@@ -152,6 +154,102 @@ router.get(
       success: true,
       data: paymentAnalytics,
     });
+  })
+);
+
+// ============================================
+// Coupon management
+// ============================================
+
+const couponRepository = AppDataSource.getRepository(Coupon);
+
+/**
+ * GET /api/v1/admin/coupons
+ */
+router.get(
+  '/coupons',
+  authMiddleware,
+  requireRole(['admin']),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const coupons = await couponRepository.find({ order: { createdAt: 'DESC' } });
+    res.json({ success: true, data: { coupons } });
+  })
+);
+
+/**
+ * POST /api/v1/admin/coupons
+ */
+router.post(
+  '/coupons',
+  authMiddleware,
+  requireRole(['admin']),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { code, description, type, value, usageLimit, expiresAt } = req.body;
+
+    if (!code || !description || !type || value === undefined) {
+      throw new AppError('Code, description, type, and value are required', 400, 'VALIDATION_ERROR');
+    }
+
+    const existing = await couponRepository.findOne({ where: { code: code.toUpperCase() } });
+    if (existing) {
+      throw new AppError('A coupon with this code already exists', 409, 'DUPLICATE_CODE');
+    }
+
+    const coupon = couponRepository.create({
+      code: code.toUpperCase(),
+      description,
+      type,
+      value,
+      usageLimit: usageLimit || 0,
+      isActive: true,
+      expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+    });
+
+    await couponRepository.save(coupon);
+    res.status(201).json({ success: true, data: coupon });
+  })
+);
+
+/**
+ * PUT /api/v1/admin/coupons/:id
+ */
+router.put(
+  '/coupons/:id',
+  authMiddleware,
+  requireRole(['admin']),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const coupon = await couponRepository.findOne({ where: { id: req.params.id } });
+    if (!coupon) {
+      throw new AppError('Coupon not found', 404, 'COUPON_NOT_FOUND');
+    }
+
+    const { description, value, usageLimit, isActive, expiresAt } = req.body;
+    if (description !== undefined) coupon.description = description;
+    if (value !== undefined) coupon.value = value;
+    if (usageLimit !== undefined) coupon.usageLimit = usageLimit;
+    if (isActive !== undefined) coupon.isActive = isActive;
+    if (expiresAt !== undefined) coupon.expiresAt = expiresAt ? new Date(expiresAt) : undefined;
+
+    await couponRepository.save(coupon);
+    res.json({ success: true, data: coupon });
+  })
+);
+
+/**
+ * DELETE /api/v1/admin/coupons/:id
+ */
+router.delete(
+  '/coupons/:id',
+  authMiddleware,
+  requireRole(['admin']),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const coupon = await couponRepository.findOne({ where: { id: req.params.id } });
+    if (!coupon) {
+      throw new AppError('Coupon not found', 404, 'COUPON_NOT_FOUND');
+    }
+
+    await couponRepository.remove(coupon);
+    res.json({ success: true, message: 'Coupon deleted' });
   })
 );
 
