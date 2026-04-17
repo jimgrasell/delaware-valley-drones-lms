@@ -28,7 +28,7 @@ export class Quiz {
   @Column({ nullable: true })
   description?: string;
 
-  @Column({ type: 'integer', default: 10 })
+  @Column({ type: 'integer', default: 70 })
   passingScore: number;
 
   @Column({ type: 'integer', default: 0 })
