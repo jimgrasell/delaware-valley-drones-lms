@@ -156,59 +156,93 @@ export class EmailService {
   }
 
   /**
-   * Send quiz passed notification
+   * Send quiz result notification — picks one of three templates
+   * based on the student's score:
+   *   - < 70%        → failed, encourage retake with study tips
+   *   - 70% to 79%   → passed but encourage retake for 80%+
+   *   - >= 80%       → excellent, simple congratulations
    */
-  async sendQuizPassedEmail(email: string, name: string, chapterTitle: string, score: number): Promise<void> {
-    const htmlBody = `
-      <h2>Quiz Passed! ✓</h2>
-      <p>Hi ${name},</p>
-      <p>Congratulations! You have successfully passed the <strong>${chapterTitle}</strong> quiz.</p>
-      <p><strong>Your Score:</strong> ${score}%</p>
-      <p>You're making great progress toward your FAA Part 107 Remote Pilot Certification!</p>
-      <p><a href="${process.env.FRONTEND_URL}/dashboard">Continue learning</a></p>
-      <p>Best regards,<br/>Delaware Valley Drones Team</p>
-    `;
+  async sendQuizResultEmail(
+    email: string,
+    name: string,
+    chapterTitle: string,
+    chapterId: string,
+    score: number,
+    passingScore: number
+  ): Promise<void> {
+    const chapterUrl = `${process.env.FRONTEND_URL}/chapters/${chapterId}`;
+    const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard`;
+
+    let subject: string;
+    let htmlBody: string;
+    let tag: string;
+
+    if (score < passingScore) {
+      // Tier 1: Not passed
+      subject = `Quiz Results: ${chapterTitle} — Let's Review and Try Again`;
+      tag = 'quiz_failed';
+      htmlBody = `
+        <h2>Quiz Results: ${chapterTitle}</h2>
+        <p>Hi ${name},</p>
+        <p>You scored <strong>${score}%</strong> on the <strong>${chapterTitle}</strong> quiz. The passing mark is ${passingScore}%, so you'll need to retake this one before moving on.</p>
+        <p>Don't be discouraged — this is how the learning works. The students who eventually ace the FAA Part 107 exam almost all had to retake chapter quizzes along the way. Here's how to prepare for the retake:</p>
+        <ol>
+          <li><strong>Re-read the chapter content</strong> — pay extra attention to any sections you skimmed the first time.</li>
+          <li><strong>Watch the video lecture again</strong> (if you took the quiz right after). Reviewing a day later makes concepts stick.</li>
+          <li><strong>Study the figures carefully.</strong> Many questions test your ability to read charts, diagrams, and regulatory tables.</li>
+          <li><strong>Write down key terms and rules in your own words.</strong> If you can explain a concept simply, you understand it.</li>
+          <li><strong>Take a break.</strong> 15–20 minutes away helps your brain consolidate what you just read.</li>
+        </ol>
+        <p>When you're ready, retake the quiz — there's no penalty, and only your best score counts toward certification.</p>
+        <p><a href="${chapterUrl}" style="background-color: #0f4c81; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Back to the chapter</a></p>
+        <p>You've got this.</p>
+        <p>— Delaware Valley Drones Team</p>
+      `;
+    } else if (score < 80) {
+      // Tier 2: Passed but encourage improvement (70-79)
+      subject = `Passed! But You Can Do Even Better — ${chapterTitle}`;
+      tag = 'quiz_passed_low';
+      htmlBody = `
+        <h2>Passed — and there's room to grow</h2>
+        <p>Hi ${name},</p>
+        <p>Good work — you passed the <strong>${chapterTitle}</strong> quiz with a score of <strong>${score}%</strong>. You've cleared the ${passingScore}% passing threshold, so you're free to move on to the next chapter.</p>
+        <p>That said, we encourage you to aim higher. Here's why:</p>
+        <ul>
+          <li>The actual FAA Part 107 exam requires a 70% minimum, but students who consistently score 80%+ on our practice quizzes pass the real exam on the first attempt at much higher rates.</li>
+          <li>Scores in the 70s often mean a few concepts aren't fully locked in. Better to find them here than on exam day.</li>
+          <li>Retaking the quiz is free and only your best score is kept.</li>
+        </ul>
+        <p>Consider a quick review of the chapter and a retake to push your score into the 80s. It'll pay off at the FAA testing center.</p>
+        <p>
+          <a href="${chapterUrl}" style="background-color: #0f4c81; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-right: 10px;">Back to the chapter</a>
+          <a href="${dashboardUrl}" style="background-color: #fff; color: #0f4c81; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; border: 1px solid #0f4c81;">Continue to next chapter</a>
+        </p>
+        <p>— Delaware Valley Drones Team</p>
+      `;
+    } else {
+      // Tier 3: Excellent (80%+)
+      subject = `Excellent Work on ${chapterTitle}! 🎯`;
+      tag = 'quiz_passed_high';
+      htmlBody = `
+        <h2>Excellent Work!</h2>
+        <p>Hi ${name},</p>
+        <p>Outstanding — you scored <strong>${score}%</strong> on the <strong>${chapterTitle}</strong> quiz.</p>
+        <p>A score of 80% or higher means you've genuinely absorbed the material, not just passed the minimum. This is the level that correlates strongly with passing the FAA Part 107 knowledge test on the first attempt. Keep this pace up and you're on track for certification.</p>
+        <p>Take a short break if you've earned one, then head back to the dashboard to continue the course.</p>
+        <p><a href="${dashboardUrl}" style="background-color: #0f4c81; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Continue learning</a></p>
+        <p>— Delaware Valley Drones Team</p>
+      `;
+    }
 
     await this.sendEmail({
       to: email,
-      subject: `Quiz Passed: ${chapterTitle}`,
+      subject,
       htmlBody,
-      tag: 'quiz_passed',
+      tag,
       metadata: {
         category: 'quiz_notification',
         chapterTitle,
-      },
-    });
-  }
-
-  /**
-   * Send quiz failed notification with retry option
-   */
-  async sendQuizFailedEmail(email: string, name: string, chapterTitle: string, score: number, passingScore: number): Promise<void> {
-    const htmlBody = `
-      <h2>Quiz Not Passed</h2>
-      <p>Hi ${name},</p>
-      <p>You didn't pass the <strong>${chapterTitle}</strong> quiz this time.</p>
-      <p><strong>Your Score:</strong> ${score}%</p>
-      <p><strong>Passing Score Required:</strong> ${passingScore}%</p>
-      <p>Don't worry! You can review the course materials and try again. Here are some tips:</p>
-      <ul>
-        <li>Review the chapter content thoroughly</li>
-        <li>Take notes on key concepts</li>
-        <li>Revisit any topics you found challenging</li>
-      </ul>
-      <p><a href="${process.env.FRONTEND_URL}/dashboard">Retry the quiz</a></p>
-      <p>Best regards,<br/>Delaware Valley Drones Team</p>
-    `;
-
-    await this.sendEmail({
-      to: email,
-      subject: `Quiz Results: ${chapterTitle} - Please Try Again`,
-      htmlBody,
-      tag: 'quiz_failed',
-      metadata: {
-        category: 'quiz_notification',
-        chapterTitle,
+        score: String(score),
       },
     });
   }

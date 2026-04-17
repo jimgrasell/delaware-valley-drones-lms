@@ -5,8 +5,10 @@ import { QuestionOption } from '../models/QuestionOption';
 import { QuizAttempt, AttemptStatus } from '../models/QuizAttempt';
 import { QuizAnswer } from '../models/QuizAnswer';
 import { ChapterProgress, ProgressStatus } from '../models/ChapterProgress';
+import { User } from '../models/User';
 import { AppError } from '../middleware/errorHandler';
 import { calculateQuizScore, isQuizPassed } from '../utils/helpers';
+import { emailService } from './EmailService';
 
 export class QuizService {
   private quizRepository = AppDataSource.getRepository(Quiz);
@@ -15,6 +17,7 @@ export class QuizService {
   private attemptRepository = AppDataSource.getRepository(QuizAttempt);
   private answerRepository = AppDataSource.getRepository(QuizAnswer);
   private chapterProgressRepository = AppDataSource.getRepository(ChapterProgress);
+  private userRepository = AppDataSource.getRepository(User);
 
   /**
    * Get quiz questions for student (shuffled if enabled)
@@ -185,6 +188,17 @@ export class QuizService {
       await this.updateChapterProgressOnPass(quiz.chapterId, attempt.studentId, score);
     }
 
+    // Fire-and-forget quiz result email. Tier is picked inside the
+    // EmailService based on score (< passingScore, passingScore..79, 80+).
+    // Wrapped so a mail-delivery failure never breaks the grade response.
+    this.sendQuizResultEmailFireAndForget(
+      attempt.studentId,
+      quiz.chapterId,
+      quiz.chapter?.title || 'your quiz',
+      score,
+      quiz.passingScore
+    );
+
     return {
       attemptId: attempt.id,
       score,
@@ -197,6 +211,35 @@ export class QuizService {
       totalPoints,
       showCorrectAnswers: quiz.showCorrectAnswers,
     };
+  }
+
+  /**
+   * Fire-and-forget helper for the quiz result email. Loads the student
+   * so we have their email + first name, then delegates to EmailService
+   * which picks the right template based on score. Any failure is logged
+   * and swallowed — email delivery must never break the grade response.
+   */
+  private sendQuizResultEmailFireAndForget(
+    userId: string,
+    chapterId: string,
+    chapterTitle: string,
+    score: number,
+    passingScore: number
+  ): void {
+    (async () => {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) return;
+      await emailService.sendQuizResultEmail(
+        user.email,
+        user.firstName,
+        chapterTitle,
+        chapterId,
+        score,
+        passingScore
+      );
+    })().catch((err) => {
+      console.error('Quiz result email failed:', err);
+    });
   }
 
   /**
