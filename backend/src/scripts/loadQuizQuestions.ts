@@ -44,18 +44,36 @@ interface ParsedQuestion {
 // Area → Chapter mapping
 // ---------------------------------------------------------------------------
 
-// Questions are distributed round-robin within each area's target chapters.
-// Ch12 (Final Review) and Ch13 (Certification Assessment) pull mixed questions.
+// Maps the 5 FAA knowledge areas to the chapters whose content actually
+// covers that area. Questions distribute round-robin within each area's
+// target chapters.
+//
+// Chapter titles (post-AlignChapterTitlesWithContent migration):
+//   1. Welcome to the Part 107 Certification Journey  (intro)
+//   2. Aviation Fundamentals for Drone Pilots         (aerodynamics)
+//   3. Part 107 Regulations - General Rules
+//   4. Part 107 Regulations - Operations & Waivers
+//   5. Airspace Classification and Structure
+//   6. Airspace Operations and Restrictions
+//   7. Aviation Weather Sources and Interpretation
+//   8. Weather Effects on sUAS Performance
+//   9. Weight, Balance, and Aircraft Performance
+//   10. Radio Communications and Airport Operations
+//   11. Emergency Procedures and Risk Management
+//   12. Physiological Factors and Aircraft Maintenance
+//   13. Practice Exam 1                               (mixed)
 const AREA_TO_CHAPTERS: Record<number, number[]> = {
-  1: [1, 9, 11],     // Regulations → Intro, PIC Responsibilities, Privacy/Ethics
-  2: [2, 10],         // Airspace → Airspace & Ops, Night Ops
-  3: [5],             // Weather → Weather chapter
-  4: [4],             // Loading/Performance → Flight Principles
-  5: [3, 6, 7, 8],   // Operations → Safety, Maintenance, Visual Scanning, Navigation
+  1: [3, 4],       // Regulations → General Rules, Operations & Waivers
+  2: [5, 6],       // Airspace → Classification, Operations & Restrictions
+  3: [7, 8],       // Weather → Sources & Interpretation, Effects on sUAS
+  4: [2, 9],       // Loading/Performance → Aviation Fundamentals, Weight & Balance
+  5: [10, 11, 12], // Operations → Radio/Airport, Emergency, Physio & Maintenance
 };
 
-// Ch12 and Ch13 each get a small mixed set pulled from the tail of each area.
-const MIXED_CHAPTERS = [12, 13];
+// Ch1 (intro) and Ch13 (Practice Exam 1) pull mixed questions from
+// every area. Ch1 gets a handful of orientation-level questions; Ch13
+// gets a balanced cross-section to simulate the real FAA exam.
+const MIXED_CHAPTERS = [1, 13];
 const MIXED_QUESTIONS_PER_CHAPTER = 5;
 
 // ---------------------------------------------------------------------------
