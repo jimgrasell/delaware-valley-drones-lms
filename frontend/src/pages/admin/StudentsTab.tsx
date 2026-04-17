@@ -3,8 +3,17 @@ import {
   adminApi,
   type StudentSummary,
   type StudentDetail,
+  type StudentPayment,
   type Pagination,
 } from '../../api/admin';
+
+function extractErr(err: unknown): string {
+  if (err && typeof err === 'object') {
+    const e = err as { response?: { data?: { message?: string } }; message?: string };
+    return e.response?.data?.message || e.message || 'Unknown error';
+  }
+  return 'Unknown error';
+}
 
 type LoadState =
   | { kind: 'loading' }
@@ -31,13 +40,7 @@ function StudentsTab() {
 
   useEffect(() => { loadPage(1); }, [loadPage]);
 
-  const handleExpand = async (id: string) => {
-    if (expandedId === id) {
-      setExpandedId(null);
-      setDetail(null);
-      return;
-    }
-    setExpandedId(id);
+  const loadDetail = useCallback(async (id: string) => {
     setDetailLoading(true);
     try {
       const d = await adminApi.getStudentDetail(id);
@@ -47,6 +50,21 @@ function StudentsTab() {
     } finally {
       setDetailLoading(false);
     }
+  }, []);
+
+  const handleExpand = async (id: string) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+      setDetail(null);
+      return;
+    }
+    setExpandedId(id);
+    await loadDetail(id);
+  };
+
+  const refreshDetail = async () => {
+    if (expandedId) await loadDetail(expandedId);
+    loadPage(page);
   };
 
   if (state.kind === 'loading') {
@@ -80,6 +98,7 @@ function StudentsTab() {
                 <th className="px-4 py-3 text-right font-medium text-slate-600">Progress</th>
                 <th className="px-4 py-3 text-right font-medium text-slate-600">Avg Score</th>
                 <th className="px-4 py-3 text-right font-medium text-slate-600">Joined</th>
+                <th className="px-4 py-3 text-center font-medium text-slate-600">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -91,6 +110,7 @@ function StudentsTab() {
                   detail={expandedId === s.id ? detail : null}
                   detailLoading={expandedId === s.id && detailLoading}
                   onToggle={() => handleExpand(s.id)}
+                  onRefresh={refreshDetail}
                 />
               ))}
             </tbody>
@@ -134,12 +154,14 @@ function StudentRow({
   detail,
   detailLoading,
   onToggle,
+  onRefresh,
 }: {
   student: StudentSummary;
   isExpanded: boolean;
   detail: StudentDetail | null;
   detailLoading: boolean;
   onToggle: () => void;
+  onRefresh: () => void;
 }) {
   return (
     <>
@@ -159,39 +181,25 @@ function StudentRow({
         <td className="px-4 py-3 text-right text-slate-500">
           {new Date(student.createdAt).toLocaleDateString()}
         </td>
+        <td className="px-4 py-3 text-center">
+          {student.isActive ? (
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+              Active
+            </span>
+          ) : (
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+              Inactive
+            </span>
+          )}
+        </td>
       </tr>
 
       {isExpanded && (
         <tr>
-          <td colSpan={5} className="bg-slate-50 px-6 py-4">
+          <td colSpan={6} className="bg-slate-50 px-6 py-4">
             {detailLoading && <p className="text-sm text-slate-500">Loading details&hellip;</p>}
             {!detailLoading && detail && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Per-chapter progress
-                </p>
-                <div className="grid gap-2">
-                  {[...detail.chapterProgress]
-                    .sort((a, b) => a.chapterNumber - b.chapterNumber)
-                    .map((cp) => (
-                      <div
-                        key={cp.chapterId}
-                        className="flex items-center gap-3 rounded border border-slate-200 bg-white px-3 py-2 text-sm"
-                      >
-                        <span className="w-6 text-right text-slate-400 font-mono">
-                          {cp.chapterNumber}
-                        </span>
-                        <span className="flex-1 text-slate-800">{cp.title}</span>
-                        <StatusBadge status={cp.status} />
-                        {cp.quizPassed && (
-                          <span className="text-xs text-emerald-600">
-                            Quiz: {cp.bestQuizScore}%
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </div>
+              <StudentDetailPanel detail={detail} onRefresh={onRefresh} />
             )}
             {!detailLoading && !detail && (
               <p className="text-sm text-red-600">Could not load student details.</p>
@@ -200,6 +208,191 @@ function StudentRow({
         </tr>
       )}
     </>
+  );
+}
+
+function StudentDetailPanel({
+  detail,
+  onRefresh,
+}: {
+  detail: StudentDetail;
+  onRefresh: () => void;
+}) {
+  const handleDeactivate = async () => {
+    if (!confirm(`Deactivate ${detail.name}? They will no longer be able to sign in.`)) return;
+    try {
+      await adminApi.deactivateStudent(detail.id);
+      onRefresh();
+    } catch (err) {
+      alert('Failed to deactivate: ' + extractErr(err));
+    }
+  };
+
+  const handleReactivate = async () => {
+    try {
+      await adminApi.reactivateStudent(detail.id);
+      onRefresh();
+    } catch (err) {
+      alert('Failed to reactivate: ' + extractErr(err));
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Account metadata */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
+        <InfoBox label="Account created" value={new Date(detail.createdAt).toLocaleDateString()} />
+        <InfoBox
+          label="Enrolled"
+          value={
+            detail.enrolledAt
+              ? new Date(detail.enrolledAt).toLocaleDateString()
+              : 'Not enrolled'
+          }
+        />
+        <InfoBox label="Account status" value={detail.isActive ? 'Active' : 'Inactive'} />
+        <InfoBox label="Enrollment status" value={detail.status || '—'} />
+      </div>
+
+      {/* Admin actions */}
+      <div className="flex flex-wrap gap-2">
+        {detail.isActive ? (
+          <button
+            type="button"
+            onClick={handleDeactivate}
+            className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+          >
+            Deactivate account
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleReactivate}
+            className="rounded border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+          >
+            Reactivate account
+          </button>
+        )}
+      </div>
+
+      {/* Payments */}
+      {detail.payments.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Payments
+          </p>
+          <div className="space-y-2">
+            {detail.payments.map((p) => (
+              <PaymentRow key={p.id} payment={p} onRefresh={onRefresh} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Chapter progress */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Per-chapter progress
+        </p>
+        <div className="grid gap-2">
+          {detail.chapterProgress.map((cp) => (
+            <div
+              key={cp.chapterId}
+              className="flex items-center gap-3 rounded border border-slate-200 bg-white px-3 py-2 text-sm"
+            >
+              <span className="w-8 text-right text-slate-400 font-mono">
+                Ch {cp.chapterNumber}
+              </span>
+              <span className="flex-1 text-slate-800">{cp.title}</span>
+              <StatusBadge status={cp.status} />
+              {cp.quizPassed && (
+                <span className="text-xs text-emerald-600">
+                  Quiz: {cp.bestQuizScore}%
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PaymentRow({
+  payment,
+  onRefresh,
+}: {
+  payment: StudentPayment;
+  onRefresh: () => void;
+}) {
+  const [refunding, setRefunding] = useState(false);
+
+  const handleRefund = async () => {
+    const dollars = (payment.amount / 100).toFixed(2);
+    if (!confirm(`Issue a full refund of $${dollars} via Stripe? This cannot be undone and will cancel the student's enrollment.`)) return;
+    setRefunding(true);
+    try {
+      await adminApi.refundPayment(payment.id);
+      onRefresh();
+    } catch (err) {
+      alert('Refund failed: ' + extractErr(err));
+    } finally {
+      setRefunding(false);
+    }
+  };
+
+  const canRefund = payment.status === 'completed';
+
+  return (
+    <div className="flex items-center gap-3 rounded border border-slate-200 bg-white px-3 py-2 text-sm">
+      <span className="font-mono text-slate-900">
+        ${(payment.amount / 100).toFixed(2)}
+      </span>
+      <span className="text-xs text-slate-500">
+        {new Date(payment.createdAt).toLocaleDateString()}
+      </span>
+      {payment.couponCode && (
+        <span className="rounded bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+          {payment.couponCode}
+          {payment.discountAmount > 0 && ` (−$${(payment.discountAmount / 100).toFixed(2)})`}
+        </span>
+      )}
+      <PaymentStatusBadge status={payment.status} />
+      <span className="flex-1" />
+      {canRefund && (
+        <button
+          type="button"
+          onClick={handleRefund}
+          disabled={refunding}
+          className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+        >
+          {refunding ? 'Refunding…' : 'Refund'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-slate-200 bg-white p-2">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-0.5 text-sm font-medium text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function PaymentStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    completed: 'bg-emerald-50 text-emerald-700',
+    pending: 'bg-amber-50 text-amber-700',
+    failed: 'bg-red-50 text-red-700',
+    refunded: 'bg-slate-100 text-slate-600',
+  };
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status] || 'bg-slate-100 text-slate-600'}`}>
+      {status}
+    </span>
   );
 }
 
@@ -219,14 +412,6 @@ function StatusBadge({ status }: { status: string }) {
       {labels[status] || status}
     </span>
   );
-}
-
-function extractErr(err: unknown): string {
-  if (err && typeof err === 'object') {
-    const e = err as { response?: { data?: { message?: string } }; message?: string };
-    return e.response?.data?.message || e.message || 'Unknown error';
-  }
-  return 'Unknown error';
 }
 
 export default StudentsTab;

@@ -193,18 +193,27 @@ function ChapterContent({
           </span>
         )}
 
-        {isAuthenticated && chapter.quizCount > 0 ? (
+        {chapter.quizCount > 0 && isAuthenticated && completed && (
           <Link
             to={`/chapters/${chapter.id}/quiz`}
             className="rounded-md border border-brand bg-white px-4 py-2 text-sm font-medium text-brand shadow-sm transition hover:bg-brand hover:text-white"
           >
             Take quiz ({chapter.quizCount})
           </Link>
-        ) : chapter.quizCount > 0 ? (
+        )}
+        {chapter.quizCount > 0 && isAuthenticated && !completed && (
+          <span
+            className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400"
+            title="Mark this chapter complete before taking the quiz"
+          >
+            Take quiz ({chapter.quizCount}) — mark complete first
+          </span>
+        )}
+        {chapter.quizCount > 0 && !isAuthenticated && (
           <span className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-400">
             Take quiz ({chapter.quizCount})
           </span>
-        ) : null}
+        )}
 
         {!isAuthenticated && (
           <Link

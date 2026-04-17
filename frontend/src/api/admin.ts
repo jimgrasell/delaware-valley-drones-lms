@@ -38,12 +38,26 @@ export interface StudentSummary {
   name: string;
   email: string;
   createdAt: string;
+  enrolledAt: string;
+  isActive: boolean;
   status: string;
   completedChapters: number;
   totalChapters: number;
   completionPercentage: number;
   passedQuizzes: number;
   averageQuizScore: number;
+}
+
+export interface StudentPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  couponCode: string | null;
+  discountAmount: number;
+  stripePaymentIntentId: string | null;
+  completedAt: string | null;
+  createdAt: string;
 }
 
 export interface StudentChapterProgress {
@@ -61,13 +75,18 @@ export interface StudentDetail {
   id: string;
   name: string;
   email: string;
+  isActive: boolean;
+  isBlocked: boolean;
   createdAt: string;
+  enrolledAt: string | null;
   status: string;
+  enrollmentId: string | null;
   completedChapters: number;
   totalChapters: number;
   completionPercentage: number;
   passedQuizzes: number;
   averageQuizScore: number;
+  payments: StudentPayment[];
   chapterProgress: StudentChapterProgress[];
 }
 
@@ -169,5 +188,24 @@ export const adminApi = {
 
   deleteCoupon: async (id: string): Promise<void> => {
     await apiClient.delete(`/admin/coupons/${id}`);
+  },
+
+  deactivateStudent: async (id: string): Promise<void> => {
+    await apiClient.post(`/admin/students/${id}/deactivate`);
+  },
+
+  reactivateStudent: async (id: string): Promise<void> => {
+    await apiClient.post(`/admin/students/${id}/reactivate`);
+  },
+
+  refundPayment: async (
+    paymentId: string,
+    amount?: number
+  ): Promise<{ refundId: string; amount: number; status: string }> => {
+    const { data } = await apiClient.post<{
+      success: boolean;
+      data: { refundId: string; amount: number; status: string };
+    }>(`/admin/payments/${paymentId}/refund`, amount ? { amount } : {});
+    return data.data;
   },
 };

@@ -32,6 +32,23 @@ export class QuizService {
       throw new AppError('Quiz not found', 404, 'QUIZ_NOT_FOUND');
     }
 
+    // Students must mark the chapter complete before the quiz unlocks.
+    // Admins and instructors bypass this gate for previewing/grading.
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const isPrivileged = user?.role === 'admin' || user?.role === 'instructor';
+    if (!isPrivileged) {
+      const chapterProgress = await this.chapterProgressRepository.findOne({
+        where: { userId, chapterId: quiz.chapterId },
+      });
+      if (!chapterProgress || chapterProgress.status !== ProgressStatus.COMPLETED) {
+        throw new AppError(
+          'Please mark the chapter complete before taking the quiz',
+          403,
+          'CHAPTER_NOT_COMPLETED'
+        );
+      }
+    }
+
     // Check attempt count for retake limit
     const attempts = await this.attemptRepository.find({
       where: { studentId: userId, quizId },

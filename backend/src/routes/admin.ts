@@ -1,11 +1,19 @@
 import { Router, Response } from 'express';
+import Stripe from 'stripe';
 import { AuthRequest, authMiddleware, requireRole } from '../middleware/auth';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { adminService } from '../services/AdminService';
 import { AppDataSource } from '../config/database';
 import { Coupon } from '../models/Coupon';
+import { User } from '../models/User';
+import { Enrollment, EnrollmentStatus } from '../models/Enrollment';
+import { Payment, PaymentStatus } from '../models/Payment';
 
 const router = Router();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2023-10-16' as any,
+});
 
 /**
  * GET /api/v1/admin/students
@@ -250,6 +258,132 @@ router.delete(
 
     await couponRepository.remove(coupon);
     res.json({ success: true, message: 'Coupon deleted' });
+  })
+);
+
+// ============================================
+// Student deactivation + refund
+// ============================================
+
+const userRepository = AppDataSource.getRepository(User);
+const enrollmentRepository = AppDataSource.getRepository(Enrollment);
+const paymentRepository = AppDataSource.getRepository(Payment);
+
+/**
+ * POST /api/v1/admin/students/:id/deactivate
+ * Mark a student account inactive and cancel their enrollment.
+ * The user can no longer log in. Does NOT process a refund — that's
+ * a separate explicit action via /students/:id/refund.
+ */
+router.post(
+  '/students/:id/deactivate',
+  authMiddleware,
+  requireRole(['admin']),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await userRepository.findOne({ where: { id: req.params.id } });
+    if (!user) throw new AppError('Student not found', 404, 'STUDENT_NOT_FOUND');
+
+    user.isActive = false;
+    await userRepository.save(user);
+
+    // Also cancel any active enrollment so they lose course access
+    const enrollment = await enrollmentRepository.findOne({
+      where: { studentId: user.id, status: EnrollmentStatus.ACTIVE },
+    });
+    if (enrollment) {
+      enrollment.status = EnrollmentStatus.CANCELLED;
+      await enrollmentRepository.save(enrollment);
+    }
+
+    res.json({ success: true, message: 'Student deactivated' });
+  })
+);
+
+/**
+ * POST /api/v1/admin/students/:id/reactivate
+ */
+router.post(
+  '/students/:id/reactivate',
+  authMiddleware,
+  requireRole(['admin']),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await userRepository.findOne({ where: { id: req.params.id } });
+    if (!user) throw new AppError('Student not found', 404, 'STUDENT_NOT_FOUND');
+
+    user.isActive = true;
+    await userRepository.save(user);
+
+    res.json({ success: true, message: 'Student reactivated' });
+  })
+);
+
+/**
+ * POST /api/v1/admin/payments/:paymentId/refund
+ * Issue a Stripe refund for the given payment. Optional `amount`
+ * in cents to partial-refund; defaults to full refund.
+ */
+router.post(
+  '/payments/:paymentId/refund',
+  authMiddleware,
+  requireRole(['admin']),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const payment = await paymentRepository.findOne({
+      where: { id: req.params.paymentId },
+    });
+    if (!payment) throw new AppError('Payment not found', 404, 'PAYMENT_NOT_FOUND');
+
+    if (payment.status !== PaymentStatus.COMPLETED) {
+      throw new AppError(
+        `Payment is ${payment.status}, only COMPLETED payments can be refunded`,
+        400,
+        'INVALID_PAYMENT_STATUS'
+      );
+    }
+
+    if (!payment.stripePaymentIntentId) {
+      throw new AppError(
+        'Payment has no Stripe PaymentIntent ID — cannot refund via Stripe',
+        400,
+        'NO_PAYMENT_INTENT'
+      );
+    }
+
+    const { amount } = req.body; // optional partial refund amount in cents
+
+    try {
+      const refund = await stripe.refunds.create({
+        payment_intent: payment.stripePaymentIntentId,
+        ...(amount ? { amount } : {}),
+      });
+
+      payment.status = PaymentStatus.REFUNDED;
+      await paymentRepository.save(payment);
+
+      // Cancel the student's enrollment on refund (they paid back, they
+      // lose access)
+      const enrollment = await enrollmentRepository.findOne({
+        where: { studentId: payment.userId, status: EnrollmentStatus.ACTIVE },
+      });
+      if (enrollment) {
+        enrollment.status = EnrollmentStatus.CANCELLED;
+        await enrollmentRepository.save(enrollment);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          refundId: refund.id,
+          amount: refund.amount,
+          status: refund.status,
+        },
+      });
+    } catch (err: any) {
+      throw new AppError(
+        `Stripe refund failed: ${err.message || 'unknown error'}`,
+        500,
+        'STRIPE_REFUND_FAILED'
+      );
+    }
   })
 );
 

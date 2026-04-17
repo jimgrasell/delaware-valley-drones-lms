@@ -45,7 +45,9 @@ export class AdminService {
           id: enrollment.student.id,
           name: enrollment.student.name,
           email: enrollment.student.email,
-          createdAt: enrollment.createdAt,
+          createdAt: enrollment.student.createdAt,
+          enrolledAt: enrollment.createdAt,
+          isActive: enrollment.student.isActive,
           completedChapters,
           totalChapters: 13,
           completionPercentage: (completedChapters / 13) * 100,
@@ -91,6 +93,11 @@ export class AdminService {
       where: { studentId },
     });
 
+    const payments = await this.paymentRepository.find({
+      where: { userId: studentId },
+      order: { createdAt: 'DESC' },
+    });
+
     const completedChapters = progressData.filter((p) => p.status === ProgressStatus.COMPLETED).length;
     const passedQuizzes = progressData.filter((p) => p.quizPassed).length;
 
@@ -98,26 +105,43 @@ export class AdminService {
       id: user.id,
       name: user.name,
       email: user.email,
-      createdAt: enrollment?.createdAt,
+      isActive: user.isActive,
+      isBlocked: user.isBlocked,
+      createdAt: user.createdAt,
+      enrolledAt: enrollment?.createdAt,
       status: enrollment?.status,
-      completionStats: {
-        completedChapters,
-        totalChapters: 13,
-        completionPercentage: (completedChapters / 13) * 100,
-        passedQuizzes,
-        totalAttempts: attempts.length,
-        averageScore: this.calculateAverageScoreFromAttempts(attempts),
-      },
-       chapterProgress: progressData.map((p) => ({
-         chapterId: p.chapterId,
-         chapterTitle: p.chapter?.title,
-         status: p.status,
-         videoWatched: p.videoWatched,
-         videoProgress: p.videoProgress,
-         quizPassed: p.quizPassed,
-         bestQuizScore: p.bestQuizScore,
-         updatedAt: p.updatedAt,
-       })),
+      enrollmentId: enrollment?.id,
+      payments: payments.map((p) => ({
+        id: p.id,
+        amount: p.amount,
+        currency: p.currency,
+        status: p.status,
+        couponCode: p.couponCode || null,
+        discountAmount: p.discountAmount || 0,
+        stripePaymentIntentId: p.stripePaymentIntentId,
+        completedAt: p.completedAt,
+        createdAt: p.createdAt,
+      })),
+      // Flat shape — matches the list endpoint so the frontend can
+      // use the same StudentSummary-style type for both.
+      completedChapters,
+      totalChapters: 13,
+      completionPercentage: (completedChapters / 13) * 100,
+      passedQuizzes,
+      averageQuizScore: this.calculateAverageScoreFromAttempts(attempts),
+      chapterProgress: progressData
+        .map((p) => ({
+          chapterId: p.chapterId,
+          chapterNumber: p.chapter?.chapterNumber || 0,
+          title: p.chapter?.title || '',
+          status: p.status,
+          videoWatched: p.videoWatched,
+          videoProgress: p.videoProgress,
+          quizPassed: p.quizPassed,
+          bestQuizScore: p.bestQuizScore,
+          updatedAt: p.updatedAt,
+        }))
+        .sort((a, b) => a.chapterNumber - b.chapterNumber),
     };
   }
 
