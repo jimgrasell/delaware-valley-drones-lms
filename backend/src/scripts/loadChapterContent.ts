@@ -7,7 +7,7 @@
  * into Chapter.content keyed by chapterNumber.
  *
  * Usage:
- *   npm run content:load                      # load all 13 chapters
+ *   npm run content:load                      # load all 14 chapters
  *   npm run content:load -- --dry-run         # parse + extract images, skip DB
  *   npm run content:load -- --chapter 1       # only chapter 1
  *   npm run content:load -- --chapter 1 --chapter 2
@@ -80,8 +80,8 @@ function parseArgs(argv: string[]): Args {
         break;
       case '--chapter': {
         const n = parseInt(next, 10);
-        if (Number.isNaN(n) || n < 1 || n > 13) {
-          throw new Error(`--chapter must be an integer 1..13, got "${next}"`);
+        if (Number.isNaN(n) || n < 1 || n > 14) {
+          throw new Error(`--chapter must be an integer 1..14, got "${next}"`);
         }
         args.chapters.push(n);
         i++;
@@ -276,7 +276,7 @@ async function main() {
   console.log('  source:       ', args.source);
   console.log('  image-dir:    ', args.imageDir);
   console.log('  public-prefix:', args.publicPrefix);
-  console.log('  chapters:     ', args.chapters.length ? args.chapters.join(',') : 'all (1-13)');
+  console.log('  chapters:     ', args.chapters.length ? args.chapters.join(',') : 'all (1-14)');
   console.log('  dry-run:      ', args.dryRun);
   console.log('');
 
@@ -297,7 +297,7 @@ async function main() {
 
   const targetChapters = args.chapters.length
     ? args.chapters
-    : Array.from({ length: 13 }, (_, i) => i + 1);
+    : Array.from({ length: 14 }, (_, i) => i + 1);
 
   let succeeded = 0;
   let failed = 0;

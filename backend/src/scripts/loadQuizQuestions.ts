@@ -2,7 +2,7 @@
  * Quiz question loader.
  *
  * Reads Part_107_Practice_Questions_Bank.txt, parses the 142 questions,
- * and distributes them across the 13 chapter quizzes by topic area.
+ * and distributes them across the 14 chapter quizzes by topic area.
  *
  * Usage:
  *   npm run quiz:load                    # load all questions
@@ -48,32 +48,33 @@ interface ParsedQuestion {
 // covers that area. Questions distribute round-robin within each area's
 // target chapters.
 //
-// Chapter titles (post-AlignChapterTitlesWithContent migration):
+// Chapter titles (post-AddChapter6AndShift migration, Apr 14):
 //   1. Welcome to the Part 107 Certification Journey  (intro)
 //   2. Aviation Fundamentals for Drone Pilots         (aerodynamics)
 //   3. Part 107 Regulations - General Rules
 //   4. Part 107 Regulations - Operations & Waivers
 //   5. Airspace Classification and Structure
-//   6. Airspace Operations and Restrictions
-//   7. Aviation Weather Sources and Interpretation
-//   8. Weather Effects on sUAS Performance
-//   9. Weight, Balance, and Aircraft Performance
-//   10. Radio Communications and Airport Operations
-//   11. Emergency Procedures and Risk Management
-//   12. Physiological Factors and Aircraft Maintenance
-//   13. Practice Exam 1                               (mixed)
+//   6. Reading and Understanding Sectional Charts     ← NEW
+//   7. Airspace Operations and Restrictions
+//   8. Aviation Weather Sources and Interpretation
+//   9. Weather Effects on sUAS Performance
+//   10. Weight, Balance, and Aircraft Performance
+//   11. Radio Communications and Airport Operations
+//   12. Emergency Procedures and Risk Management
+//   13. Physiological Factors and Aircraft Maintenance
+//   14. Practice Exam 1                               (mixed)
 const AREA_TO_CHAPTERS: Record<number, number[]> = {
-  1: [3, 4],       // Regulations → General Rules, Operations & Waivers
-  2: [5, 6],       // Airspace → Classification, Operations & Restrictions
-  3: [7, 8],       // Weather → Sources & Interpretation, Effects on sUAS
-  4: [2, 9],       // Loading/Performance → Aviation Fundamentals, Weight & Balance
-  5: [10, 11, 12], // Operations → Radio/Airport, Emergency, Physio & Maintenance
+  1: [3, 4],         // Regulations → General Rules, Operations & Waivers
+  2: [5, 6, 7],      // Airspace → Classification, Sectional Charts, Operations
+  3: [8, 9],         // Weather → Sources & Interpretation, Effects on sUAS
+  4: [2, 10],        // Loading/Performance → Aviation Fundamentals, Weight & Balance
+  5: [11, 12, 13],   // Operations → Radio/Airport, Emergency, Physio & Maintenance
 };
 
-// Ch1 (intro) and Ch13 (Practice Exam 1) pull mixed questions from
-// every area. Ch1 gets a handful of orientation-level questions; Ch13
+// Ch1 (intro) and Ch14 (Practice Exam 1) pull mixed questions from
+// every area. Ch1 gets a handful of orientation-level questions; Ch14
 // gets a balanced cross-section to simulate the real FAA exam.
-const MIXED_CHAPTERS = [1, 13];
+const MIXED_CHAPTERS = [1, 14];
 const MIXED_QUESTIONS_PER_CHAPTER = 5;
 
 // ---------------------------------------------------------------------------
@@ -215,9 +216,9 @@ function distributeQuestions(questions: ParsedQuestion[]): ChapterAssignment[] {
     byArea.set(q.area, list);
   }
 
-  // Initialize assignments for all 13 chapters
+  // Initialize assignments for all 14 chapters
   const assignments = new Map<number, ParsedQuestion[]>();
-  for (let ch = 1; ch <= 13; ch++) {
+  for (let ch = 1; ch <= 14; ch++) {
     assignments.set(ch, []);
   }
 
