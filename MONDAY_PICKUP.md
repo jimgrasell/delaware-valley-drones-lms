@@ -1,303 +1,258 @@
-# Monday Pickup Notes
+# LMS Pickup Notes
 
-Status snapshot and next-action plan. Last updated **end of day Monday April 11, 2026** (after Monday evening session).
-
----
-
-## TL;DR: Where you left off
-
-You have a **deployed, authenticated, full-stack LMS** running on DigitalOcean with **real Part 107 chapter content** loaded into all 13 chapters. Every chapter renders proper headings, lists, paragraphs, and figures (47 embedded PNGs extracted from the source docx files). Students can register, browse chapters, and read the real course material. The biggest remaining pieces are **quizzes** (questions are still placeholder, and there's no quiz UI yet) and **enrollment/payments** (course is currently free to anyone who registers).
-
-**Live URL:** https://delaware-valley-drones-lms-app-u8wzb.ondigitalocean.app/
+Status snapshot. Last updated **April 14, 2026** (Tuesday morning session).
 
 ---
 
-## What works right now (verified live in production)
+## TL;DR
 
-### Backend (`/api/v1/*`)
+The Delaware Valley Drones LMS is **production-ready** at https://learn.delawarevalleydrones.com with:
 
-- Node + Express + TypeORM running on DigitalOcean App Platform
-- Connected to DigitalOcean managed Postgres over TLS
-- Schema bootstrapped (15 tables) and seeded with 13 chapters, quizzes, sample questions, and 3 promo coupons
-- JWT auth: `JWT_SECRET` and `REFRESH_TOKEN_SECRET` set, signing and verification working
-- Endpoints proven working in this session:
-  - `POST /api/v1/auth/login`
-  - `POST /api/v1/auth/register`
-  - `GET /api/v1/chapters`
-  - `GET /api/v1/students/progress`
-- Many other endpoints exist but aren't yet exercised by the frontend (admin routes, gradebook, certificate, profile, payments, forum, quizzes — see `backend/src/routes/`)
+- 13 chapters of real Part 107 content (videos, written content, figures, quizzes)
+- 142 real practice questions distributed across chapters by topic
+- Stripe checkout at $99 (test mode — flip to live when ready)
+- Postmark email (production-approved): password resets, tier-aware quiz result emails
+- Admin console: dashboard, student management with payment history + deactivate/refund, chapter editing, coupon CRUD
+- Custom domain with SSL, pre-deploy migration job, app spec in git
 
-### Frontend (`/`)
+**Real students could register, pay, learn, take quizzes, and get certified today.** The remaining gaps are operational polish (Sentry error monitoring, more tests) and one open task: **end-to-end test pass against production with a real student account** before flipping Stripe to live mode.
 
-- React 18 + Vite + TypeScript + TailwindCSS + Zustand + React Router 6 + Axios
-- Deployed as a Static Site component on the same DO app, sharing the domain with the backend
-- Built routes:
-  - `/` — public chapters page, lists all 13 chapters with quiz counts; each card is a `<Link>` to `/chapters/:id`
-  - `/chapters/:id` — public chapter detail page; fetches `GET /api/v1/chapters/:id`, renders real Part 107 content via `dangerouslySetInnerHTML` inside a Tailwind Typography `prose` container (headings, lists, images all styled), shows Mark Complete button for authenticated users, disabled Take Quiz stub. Images served from `/content/chapters/chN/image-*.png` (static-site assets).
-  - `/login` — sign in form
-  - `/register` — sign up form (5 fields with client + server validation)
-  - `/dashboard` — **protected** route, redirects to `/login` if not authenticated, shows greeting + stat cards + progress bar + per-chapter list; Continue button links to `/chapters/:id`
-- Header: shows Sign in / Sign up when logged out, user name + role + Dashboard + Sign out when logged in
-- Auth state persists across page reloads (Zustand `persist` middleware → `localStorage`)
-- Axios request interceptor automatically attaches `Authorization: Bearer <token>` to every API call
-- Axios response interceptor catches 401 and clears local auth state
+---
 
-### Routing topology on DO
+## Live URLs
 
-- `https://...ondigitalocean.app/` → static site (frontend)
-- `https://...ondigitalocean.app/api/*` → backend service (with `Preserve Path Prefix` on)
-- Static-site **Catchall Document** is set to `index.html` (set via DO dashboard → App → static-site component → Settings → Custom Pages). This makes React Router work on hard-loads, refreshes, and shared deep links like `/chapters/:id` and `/dashboard`. Without it, anything other than `/` returns a 404. **This setting currently only lives in the DO dashboard — not in git.** See operational item #18 below.
+- **Student-facing:** https://learn.delawarevalleydrones.com
+- **Backup:** https://delaware-valley-drones-lms-app-u8wzb.ondigitalocean.app (still live, will continue working)
+- **GitHub:** https://github.com/jimgrasell/delaware-valley-drones-lms
+- **DO app:** cloud.digitalocean.com/apps/fe6b594d-7116-42d8-9f50-39a4f4fed6d9
 
-### Credentials
-
-Default seeded passwords were rotated this weekend. Real passwords are in your password manager (or your head). Seeded user emails:
+## Seeded credentials
 
 - `admin@delawarevalleydrones.com` (admin)
 - `instructor@delawarevalleydrones.com` (instructor)
-- `student@example.com` (student)
+- `student@example.com` (student) — passwords in your password manager
 
-If you registered any test accounts during this session (e.g. `test@example.com`, `test1@example.com`, `test2@example.com`), they're sitting in production. Clean them up when convenient via DO's Postgres console:
+---
 
-```sql
-DELETE FROM users WHERE email LIKE 'test%@example.com';
+## What's built
+
+### Student experience
+- `/` — public landing page (hero with $99 pricing for visitors, chapter catalog for everyone)
+- `/register` — sign-up form, auto-redirects to `/checkout` after success
+- `/login`, `/forgot-password`, `/reset-password?token=…` — auth flow with Postmark password-reset emails
+- `/checkout` — coupon input, Stripe-hosted card capture, redirects to `/payment-success` on completion (webhook creates enrollment)
+- `/dashboard` — progress stats, "Continue where you left off", "Congratulations" banner + certificate link when course is complete
+- `/profile` — edit name/phone/bio + change password
+- `/chapters/:id` (auth-gated) — Vimeo video embed (when set) → written content → Mark Complete → Take Quiz button (gated on completion)
+- `/chapters/:chapterId/quiz` (auth-gated, requires chapter complete) — multiple-choice quiz, results screen with answer review
+- `/forum`, `/forum/:id` — community posts with replies (public reading, auth required to post)
+- `/certificate` — generate after completing all 13 chapters; HTML download + shareable verification link
+- `/verify/:verificationId` — public certificate verification (employer-friendly)
+
+### Admin console (`/admin`)
+- **Dashboard tab:** total/enrolled/completed students, completion rate, quiz stats, per-chapter engagement
+- **Students tab:** paginated list (name, email, progress %, avg score, joined date, active status) + click-to-expand detail with: account/enrollment dates, payment history (amount, date, coupon, Stripe refund button per payment), per-chapter progress with chapter numbers + titles, deactivate/reactivate buttons
+- **Chapters tab:** list all 13 chapters; inline edit form for title, description, Vimeo video ID
+- **Coupons tab:** create coupons (percentage or fixed-amount, usage limit), enable/disable toggle, delete
+
+### Backend
+- Express + TypeORM + Postgres on DO App Platform
+- JWT auth with **transparent token refresh on 401** (axios response interceptor calls `/auth/refresh` and retries the original request)
+- Stripe webhooks at `/api/v1/payments/webhook` — handles `checkout.session.completed` (enrollment creation) and `payment_intent.succeeded`/`payment_intent.payment_failed` (legacy)
+- Postmark email via `EmailService` — password reset, three-tier quiz result emails, welcome email scaffolded
+- Coupon CRUD + Stripe refund endpoints under `/api/v1/admin/`
+
+### Infrastructure
+- **Custom domain** `learn.delawarevalleydrones.com` with free Let's Encrypt SSL via DO
+- **Pre-deploy migration job** runs `npm run migrate:up` automatically before each deploy (uses raw `node -e ...` to bypass TypeORM CLI's strict export check)
+- **App spec exported** to `.do/app.yaml` (secrets replaced with placeholders)
+- **Branded SVG favicon**, `/api/health` route, Tailwind Typography plugin
+
+---
+
+## Recent commits (Apr 13–14)
+
+```
+7f981e7  Remap quiz questions to match realigned chapter topics
+ed57319  Align chapter titles + descriptions with actual docx content
+9209494  Set quiz passingScore to 70 (FAA Part 107 standard)
+f46ccbc  Admin + quiz gating improvements
+fcf41e4  Send tier-aware email after every quiz attempt
+f06879d  Add coupon management to admin console
+3071ec7  Add backend smoke tests for utility functions (#16)
+7888a99  Fix pre-deploy migration: bypass TypeORM CLI export check
+afcc0ae  Add DO app spec as .do/app.yaml (#18)
+a3c988e  Add /api/health route + replace placeholder favicon
+9f1e1fb  Add transparent token refresh on 401
+89617a1  Add certificate generation, download, and public verification
+a9a18b7  Add community forum UI
+79ae1fa  Fix admin Students tab crash: match flat backend response shape
+585d865  Fix webhook: handle checkout.session.completed for enrollment
+7a84ffe  Redirect new registrations to /checkout + add Enroll button
+ff87f1e  Fix Stripe checkout: skip empty product images array
+1e248f2  Add Stripe checkout flow with $99 one-time payment
+89a9ac1  Gate chapter content behind auth + add landing hero section
+ed178a7  Add Vimeo video support to chapters
+6a81f5a  Add profile page with edit profile and change password
+c4d748b  Add admin console MVP with dashboard, students, and chapters tabs
+09b9cd6  Add forgot-password / reset-password flow
 ```
 
+(See `git log` for the full history back to the Apr 9–10 weekend session.)
+
 ---
 
-## Commits through this session, in order
+## Architecture decisions to remember
 
+1. **`DB_SYNCHRONIZE` is a one-shot env var.** Currently false. Never turn it back on permanently — TypeORM will reconcile schema against entities and can drop columns.
+
+2. **`DATABASE_URL` is parsed manually** (not passed as a connection string to TypeORM) because `pg-connection-string` was upgrading `sslmode=require` to `verify-full`, which broke against DO's self-signed cert chain.
+
+3. **In-memory token holder** (`frontend/src/api/token.ts`) holds both access and refresh tokens to break a circular dep between the auth store, the API client, and the response interceptor. The store pushes both tokens on login/logout/rehydrate.
+
+4. **Chapter content is HTML stored in the DB** rendered via `dangerouslySetInnerHTML` inside a Tailwind Typography `prose` container. Loaded by `backend/src/scripts/loadChapterContent.ts` which uses mammoth to convert docx→HTML and extracts embedded images to `frontend/public/content/chapters/chN/`. Re-runnable, idempotent.
+
+5. **Quiz questions are loaded via `backend/src/scripts/loadQuizQuestions.ts`** from `Part_107_Practice_Questions_Bank.txt` (in the user's content folder, not in the repo). Maps the 5 FAA knowledge areas to the chapters whose content covers them. Re-running deletes existing questions+options for each quiz and reinserts.
+
+6. **Both loader scripts use raw `pg.Client`** (not TypeORM) to sidestep the bcrypt native-binary fragility on the dev machine. They run locally, hitting prod DB after toggling Trusted Sources off temporarily.
+
+7. **Admin/instructor bypass on access gates.** `ChapterService.canAccessChapter` (sequential progression) and `QuizService.getQuizQuestions` (chapter-must-be-complete) both bypass for admin/instructor roles so you can preview without going through the student flow.
+
+8. **DO Catchall Document = `index.html`** for the static site. Required for React Router on hard-loads. Set in dashboard; also documented in `.do/app.yaml`.
+
+9. **Quiz emails fire on every attempt.** Three tiers, picked by score against `passingScore`:
+   - `score < passingScore`: "Let's Review and Try Again" + study tips (tag: `quiz_failed`)
+   - `passingScore..79`: "Passed! But You Can Do Even Better" (tag: `quiz_passed_low`)
+   - `>= 80`: "Excellent Work! 🎯" (tag: `quiz_passed_high`)
+
+   Fire-and-forget — Postmark failure never breaks the grade response.
+
+10. **Webhook uses `checkout.session.completed`**, not `payment_intent.succeeded`. In current Stripe API versions, `session.payment_intent` is null at session creation, so the original PaymentIntent-matching logic returned 404. The session metadata carries `userId` directly.
+
+11. **Stripe is in test mode.** `sk_test_...` and `pk_test_...` keys. Test card `4242 4242 4242 4242`. Webhook endpoint registered for `checkout.session.completed` + `payment_intent.succeeded` + `payment_intent.payment_failed`. To go live: switch keys, register a new webhook endpoint with the live URL, update env vars.
+
+12. **Postmark is production-approved.** Verified domain `delawarevalleydrones.com` (DKIM + Return-Path). Sends from `noreply@delawarevalleydrones.com`. Free tier is 100 emails/month — upgrade to $15/mo (10K emails) before ~20 active students.
+
+---
+
+## Open todos
+
+### 🟢 Quick wins / hygiene
+
+- **End-to-end production test** with a real student account (jgrasell@gmail.com or similar). The full 10-test checklist is in chat history. Everything is wired up but no one has done a complete student-perspective run-through yet. Do this **before** flipping Stripe to live.
+- **#17: Sentry error monitoring** — only remaining item from the original pickup-doc todo list. Free tier (5K errors/month) is plenty. Setup is ~30 min: create account, two projects (lms-backend, lms-frontend), set DSNs as env vars, init in code.
+- Clean up test student accounts in production DB (any leftover `test@…` or fake-named accounts).
+- Verify the deactivate/refund flow with a real test payment+refund cycle.
+
+### 🟡 Pre-launch
+
+- **Switch Stripe to live mode.** Steps:
+  1. Activate live mode in Stripe dashboard
+  2. Replace `STRIPE_SECRET_KEY` (`sk_test_…` → `sk_live_…`) on the DO backend env vars
+  3. Replace `VITE_STRIPE_PUBLIC_KEY` (`pk_test_…` → `pk_live_…`) on the DO static-site env vars
+  4. Create a new webhook endpoint pointing at `learn.delawarevalleydrones.com/api/v1/payments/webhook`, listening to the same three events
+  5. Replace `STRIPE_WEBHOOK_SECRET` with the new live signing secret
+  6. Test with a real card you control, then refund yourself
+- **Postmark plan upgrade** when student count grows. Currently 100/month free tier.
+- **Welcome email** — `EmailService.sendWelcomeEmail` exists but isn't called from the registration flow. Wire it into `POST /auth/register` if you want new students to get a welcome email.
+
+### 🔵 Future enhancements
+
+- Quiz UI improvements: timer, question-by-question nav, save-and-resume
+- Forum: edit/delete UI for own posts (backend already supports), pinned/closed admin moderation UI
+- Certificate: actual PDF download (currently HTML — browser print-to-PDF works but isn't ideal). Could add `puppeteer` or similar.
+- Admin console: quiz CRUD (currently can only edit chapters; quiz questions are managed via the loader script)
+- Admin: bulk student actions (export to CSV, bulk email, etc.)
+- Tests: extend smoke tests to cover routes (currently only utility-function tests)
+
+---
+
+## Useful commands
+
+```bash
+# Run backend tests
+cd backend && npm test
+
+# Reload chapter content from docx files (requires Trusted Sources off)
+cd backend && DATABASE_URL='postgresql://...' npm run content:load
+
+# Reload quiz questions from text bank (requires Trusted Sources off)
+cd backend && DATABASE_URL='postgresql://...' npm run quiz:load
+
+# Local dev
+cd frontend && npm run dev   # vite on :5173, hits prod API via VITE_API_URL
+cd backend && npm run dev    # ts-node-dev (bcrypt issue on this machine — runs in DO container)
+
+# Push DO app spec changes
+doctl apps update fe6b594d-7116-42d8-9f50-39a4f4fed6d9 --spec .do/app.yaml
 ```
-d54d8ea  Initial commit: LMS backend implementation
-0ef83d2  Fix TypeScript compilation errors for DigitalOcean deployment
-e4c49b4  Push Claude fixes to web app
-bf9b161  Fix pino-pretty runtime crash in production
-32a29ef  Create DigitalOcean-deploy-errors
-6c5ab52  Another 2 fixes              (DATABASE_URL parsing + better startup error logging)
-ded69d2  Parse DATABASE_URL into discrete fields so ssl config is honored
-820e801  More fixes                   (DB_SYNCHRONIZE env var + fixed seed migration)
-087fa17  Fix migrate scripts and add default DataSource export
-d0a96c9  Scaffold Vite + React + Tailwind frontend with Chapters page
-223a2d0  Add login form, auth store, and React Router
-5e089f4  Add registration form and /register route
-b00c0fc  Add Sign up button to header
-e61ee8c  Add protected /dashboard route with per-chapter progress
-061762d  Add MONDAY_PICKUP.md status doc
-dacb499  Add chapter detail page at /chapters/:id         ← Monday Apr 11
-a05030c  Add Claude Code launch config for frontend dev   ← Monday Apr 11
-c903693  Update MONDAY_PICKUP.md after Monday Apr 11      ← Monday Apr 11
-e48c72e  Add chapter content loader and real Part 107 content ← Monday Apr 11 PM
-bad00a0  Update MONDAY_PICKUP.md after Monday PM session  ← Monday Apr 11 PM
-36fed0d  Let admins/instructors bypass chapter progression gate ← Monday Apr 11 PM
-```
-
-All pushed to `origin/main` and deployed. Note: the Apr 11 **DO Catchall fix** is NOT a commit — it was made directly in the DO dashboard. See operational item #18.
-
-**Monday evening also touched the prod DB directly** (no commit) by running `backend/npm run content:load` against the dev Postgres with `DATABASE_URL` exported. This upserted `chapters.content` and set `isPublished = true` for all 13 chapters. Re-running the loader is idempotent — it does not create new rows, just refreshes the content column.
-
----
-
-## Architecture decisions worth remembering
-
-1. **`DB_SYNCHRONIZE` is a one-shot env var.** It's currently `false` (or unset). Never turn it back on permanently — TypeORM will reconcile schema against entities and can drop columns. Use it only when you need to bootstrap a fresh database, then turn it off.
-
-2. **The seed migration (`SeedInitialData1712700000000`) was rewritten** to use the actual entity column names. It uses `ON CONFLICT DO NOTHING` so it's safe to re-run. To run it on production: open the backend component's Console tab in DO and run `./node_modules/.bin/typeorm migration:run -d dist/config/database.js` (or `npm run migrate:up` after the package.json fix).
-
-3. **`DATABASE_URL` is parsed manually** (not passed as a connection string to TypeORM) because `pg-connection-string` was upgrading `sslmode=require` to `verify-full`, which broke against DO's self-signed cert chain. See `backend/src/config/database.ts`.
-
-4. **Frontend talks to backend via `/api/v1`** which is the path the DO routing forwards. The frontend's `VITE_API_URL` is set to `https://delaware-valley-drones-lms-app-u8wzb.ondigitalocean.app/api/v1` at build time on the static site component.
-
-5. **The auth store uses an in-memory token holder (`src/api/token.ts`)** to break a circular dependency: `client.ts → store/auth.ts → api/auth.ts → client.ts`. The store pushes the token to the holder on login/logout/rehydrate, and the axios interceptor reads from the holder.
-
-6. **The dashboard uses `GET /api/v1/students/progress`** (not `/students/dashboard`), because the dashboard endpoint returns `totalChapters: 0` for unenrolled users while the progress endpoint always returns all 13 chapters.
-
-7. ~~**The "Continue chapter" button on the dashboard currently links to `/`**, not to a real chapter page, because `/chapters/:id` doesn't exist yet.~~ **Fixed Apr 11** — links to `/chapters/${nextChapter.chapterId}`.
-
-8. **Chapter content is rendered via `dangerouslySetInnerHTML`** in `ChapterDetailPage.tsx` because the content is HTML strings. Fine for now because content only comes from the loader script writing into the DB, but when the admin content editor is built (item #5), sanitize on input OR switch this to a markdown/sanitized renderer. Don't let untrusted user input flow through this path.
-
-9. **Mark Complete button calls `PUT /api/v1/chapters/:id/mark-completed` directly.** Per `ChapterService`, that endpoint may require a pre-existing progress row with `videoWatched: true` — this wasn't verified end-to-end because I didn't have login credentials during testing. If it 400s on first click from a fresh account, either also hit `mark-watched` first or loosen the backend's precondition.
-
-10. **Chapter content loader uses raw `pg` instead of TypeORM's `AppDataSource`.** Reason: importing the `Chapter` entity transitively pulls in `User`, which imports `bcrypt`, which has a broken native binary on the current dev machine (Linux aarch64 .so where a Mac Mach-O should be). The loader only runs a single UPDATE, so a `pg.Client` is simpler than fixing bcrypt. See `backend/src/scripts/loadChapterContent.ts`. If you ever fix bcrypt (`rm -rf node_modules/bcrypt && npm install --build-from-source`, which will need working Xcode CLT), you can switch the loader to use AppDataSource like the rest of the backend.
-
-11. **Chapter images live in `frontend/public/content/chapters/chN/` and are committed to git.** Total ~10MB. They ship with the frontend static-site build, served from `/content/chapters/chN/image-{hash}.{ext}`. The image filenames are content-hashed so re-running the loader with unchanged docx files is a no-op on disk. If a chapter's content changes, the per-chapter directory is wiped and re-populated — old orphan images don't accumulate.
-
-12. **Content loader needs the dev-db `Trusted Sources` toggle off to run from your Mac.** The dev DB under this app has a binary toggle (no IP allow-list), so running the loader locally means disabling Trusted Sources, running, and re-enabling. Always remember to re-enable afterward. When you reach operational item #18 (export DO app spec to `.do/app.yaml`) this becomes a reason to also migrate off the dev-db tier to a full managed cluster that supports IP allow-lists.
-
-13. **Chapter progression gate is admin/instructor-bypassed.** `ChapterService.canAccessChapter` enforces that authenticated users must have `status=completed` on chapter N-1 before accessing chapter N. That's the designed pedagogical flow for students. But admins and instructors bypass the gate in the route (`routes/chapters.ts`) so they can preview/grade any chapter without needing to complete earlier ones. This is enforced by role, not user ID — be careful not to accidentally undo it when refactoring. Consider replicating the bypass in the quizzes route when you build the quiz UI (item #3).
-
----
-
-## What is NOT done — prioritized to-do list for Monday
-
-### 🔴 High priority (next session)
-
-1. ~~**Chapter detail page at `/chapters/:id`**~~ ✅ **Done Apr 11** (commit `dacb499`). Route is public; Mark Complete is auth-gated inside the component. Authenticated flow was not verified end-to-end — worth a quick smoke test next time you're logged in.
-
-2. ~~**Real Part 107 chapter content**~~ ✅ **Done Apr 11 PM** (commit `e48c72e`). Loader script `backend/src/scripts/loadChapterContent.ts` reads the 13 `Chapter_N_KDP_Ebook.docx` files from `../../Part 107 Certification Course/` and upserts HTML into `chapters.content`. All 13 chapters rendered with real content on production. Loader is re-runnable whenever the source docx files change — just toggle dev-db Trusted Sources off, run, toggle it back on.
-
-### 🟡 Medium priority — now the most important open work
-
-**The natural next move is #3 (quiz UI) + #3b (real quiz questions), because content is landed and quizzes are the only remaining piece of the core learning loop.**
-
-3. **Quiz UI at `/chapters/:id/quiz`**
-   - Multiple choice questions, optional timer, submit, results screen with explanations
-   - Calls `POST /api/v1/quizzes/:id/attempt` (confirm the exact shape in `backend/src/routes/quizzes.ts`)
-   - Updates the student's progress on success; wires into the existing `ChapterProgress` table
-   - Activates the currently-disabled "Take quiz" button on `ChapterDetailPage.tsx`
-   - **Estimated:** 1-2 sessions
-
-3b. **Real quiz questions** (parallel with or after #3)
-   - Source: `/Users/forrest/claude-code/Part 107 Certification Course/Part 107 Certification Course/Part_107_Practice_Questions_Bank.txt` (68KB plain text file with a bank of practice questions already written)
-   - Current DB state: every quiz has 10 placeholder questions named `"Sample Question N for Chapter N?"` with correct answer always being "Option A (Correct)". Need to replace these.
-   - Approach options:
-     - **Extend the existing loader** (`backend/src/scripts/loadChapterContent.ts`) to also parse the practice questions file and replace `questions` + `question_options` rows for each quiz. Same script, same run pattern.
-     - **Write a separate loader** (`loadQuizQuestions.ts`) so concerns stay separated.
-   - Recommend the extended loader approach since it's one less file and one less command to remember — but only if parsing the .txt format is trivial. Read the first ~200 lines of the file to assess before committing.
-   - Delete-and-recreate semantics for quiz questions (they have no natural key; simplest is to DELETE existing questions+options for each quiz, then INSERT fresh).
-   - **Estimated:** 1 session if the .txt format is clean; 2 sessions if it needs significant massaging.
-
-4. **Forgot password flow**
-   - Backend endpoint `POST /api/v1/auth/forgot-password` exists but is stubbed (doesn't actually send email)
-   - Need: SMTP/Postmark configured (`POSTMARK_API_KEY` env var, sender domain, etc.)
-   - Need: frontend `/forgot-password` page with email input
-   - Need: backend implementation to actually send a reset email and handle the reset token
-   - **Estimated:** 1 session, plus DNS work for sender domain verification
-
-5. **Admin console at `/admin`**
-   - Requires the `ProtectedRoute` `requireRole="admin"` prop (already supported)
-   - Pages for: chapter CRUD, quiz CRUD, user management, view enrollments, view all quiz attempts
-   - Backend endpoints exist at `/api/v1/admin/*` — see `backend/src/routes/admin.ts`
-   - **Estimated:** 2-3 sessions
-
-6. **Profile page at `/profile`**
-   - Edit firstName, lastName, phone, bio, profile photo
-   - Change password form
-   - Backend endpoints already exist (`PUT /api/v1/auth/profile`, `PUT /api/v1/auth/change-password`)
-   - **Estimated:** 1 session
-
-### 🟢 Lower priority (after MVP learner experience works)
-
-7. **Stripe payment integration**
-   - Course is currently free / bypassed; nobody's actually paying
-   - Frontend already has `@stripe/react-stripe-js` installed
-   - Backend already has `stripe` SDK and `PaymentService.ts`
-   - Need: Stripe API keys (`STRIPE_SECRET_KEY` on backend, `VITE_STRIPE_PUBLIC_KEY` on frontend)
-   - Need: checkout UI, success/cancel pages, webhook handler for payment confirmation
-   - Tied to the enrollment flow — payment unlocks an `Enrollment` row for the user
-   - **Estimated:** 2-3 sessions, plus Stripe account setup
-
-8. **Forum at `/forum`**
-   - Backend has `POST /forum/posts`, `GET /forum/posts`, `POST /forum/posts/:id/replies`, etc.
-   - Frontend has nothing yet
-   - **Estimated:** 1-2 sessions
-
-9. **Certificate at `/certificate`**
-   - Backend has `Certificate` model and `GET /students/certificate`
-   - PDF generation is probably not built yet — need to confirm
-   - **Estimated:** 1-2 sessions
-
-10. **Token refresh on 401**
-    - Currently the response interceptor just logs the user out on 401
-    - Should: when the access token expires, transparently call `POST /auth/refresh` with the refresh token, retry the original request
-    - Not urgent: access tokens live 24h by default
-    - **Estimated:** half session
-
-### 🔵 Operational / nice-to-have
-
-11. **Custom domain.** Point `learn.delawarevalleydrones.com` (or similar) at the DO app via the dashboard's Domains tab. Free SSL via DO.
-
-12. **`/api/health` route.** Currently `/health` works inside the container (DO's readiness probe is fine) but `/api/health` from outside returns a JSON 404 because the backend only mounts `/health`. Trivial fix in `server.ts`: add `app.get('/api/health', ...)` alongside the existing `/health` handler.
-
-13. **Pre-deploy migration job on DO.** Right now you'd manually open the backend component's Console tab to run migrations. The proper pattern is a **Pre-Deploy Job** in the DO app spec that runs `npm run migrate:up` before each deploy. Set this up before you start writing real schema migrations.
-
-14. **Replace placeholder favicon.** Browser DevTools shows a 404 for `/favicon.ico` on every page load. Harmless but ugly. Add a real favicon to `frontend/public/`.
-
-15. **`backend/src/routes/auth.ts` uses `pino()` directly** in a few places instead of the configured logger. Also, the `forgot-password` handler has a `// TODO: Implement password reset email logic` comment. Worth cleaning up when you tackle the email work.
-
-16. **Tests.** Backend has a `tests/` directory and a Jest config but no tests written. Frontend has a `tests/` directory and Vitest installed but no tests. Adding even a smoke test for login would catch regressions.
-
-17. **Error monitoring.** Sentry, LogRocket, or DO's built-in logs only? Decide before you have real users.
-
-18. **Export the DO app spec to `.do/app.yaml` (IaC).** Currently the DO app is configured entirely via the dashboard. As of Apr 11, that dashboard-only config includes the critical **Catchall Document = `index.html`** setting that makes SPA deep links work — if you ever recreate the app, tear down the component, or spin up a staging env, you have to remember to click that again. Fix this by:
-    - `brew install doctl && doctl auth init`
-    - `doctl apps spec get fe6b594d-7116-42d8-9f50-39a4f4fed6d9 > .do/app.yaml`
-    - Review the exported YAML, confirm `catchall_document: index.html` is in the static-site entry, confirm env var `Encrypted` secrets aren't dumped in plaintext (DO redacts them but double-check), commit it
-    - From then on, edit `.do/app.yaml` in git and run `doctl apps update <id> --spec .do/app.yaml` (or wire it into a deploy hook)
-    - **Estimated:** 1 session. Best done together with item #11 (custom domain) and #13 (pre-deploy migration job), both of which also want spec-level control.
-
----
-
-## Three security / housekeeping items still open
-
-1. **`renoschubert`** — you said it's no longer an issue, but just noting we never verified what it was. If it ever resurfaces, check GitHub repo collaborators, deploy keys, GitHub Apps, and DO team members.
-
-2. **Test accounts in production DB.** If you registered any throwaway accounts to test register/login (`test@example.com`, etc.), delete them.
-
-3. **`ChangeMe123!` is committed in plaintext** to `backend/src/migrations/1712700000000-SeedInitialData.ts`. The seeded passwords have all been rotated, so the static commit is harmless now, but be aware that any future fresh database bootstrap would re-create those users with that default. If that's a problem, change the migration to hash a randomly-generated password and log it once (or remove the seeded users entirely from the migration and require manual creation).
-
----
-
-## Recommended next opening move
-
-**Do #3b first (real quiz questions from the practice bank), then #3 (quiz UI).**
-
-Reasoning: the quiz UI needs real questions to even be meaningfully testable. If you build the UI first against placeholder questions you'll just have to re-test it later against real ones. Question loading is probably faster than UI work anyway (~1 session if the .txt parses cleanly), and once real questions are in the DB, the UI work has a much tighter feedback loop.
-
-Suggested opening prompt:
-
-> "Pick up from MONDAY_PICKUP.md. Start with item #3b: extend the chapter content loader to also load quiz questions from `Part_107_Practice_Questions_Bank.txt`. Read the file first to understand the format, then plan. After that's working, we'll move to #3 (quiz UI)."
-
-Don't forget: running the loader against prod means toggling **Trusted Sources off** on the dev-db (DO dashboard → App → dev-db-057722 → Settings → Trusted Sources → Edit → uncheck → Save), running the loader, then toggling it **back on**. Or, better, use the session to finally do operational item #18 and migrate to a real managed cluster so this stops being a recurring chore.
-
----
 
 ## Useful repo paths
 
 ```
 backend/
 ├── src/
-│   ├── config/database.ts          ← DataSource, DATABASE_URL parsing, SSL config
-│   ├── routes/                     ← All the express routes
-│   │   ├── auth.ts
-│   │   ├── chapters.ts
-│   │   ├── students.ts
-│   │   ├── quizzes.ts
-│   │   ├── admin.ts
-│   │   ├── payments.ts
-│   │   ├── forum.ts
-│   │   └── certificates.ts
-│   ├── services/                   ← Business logic
-│   ├── models/                     ← TypeORM entities (the source of truth for schema)
-│   ├── middleware/auth.ts          ← authMiddleware + requireRole
-│   └── migrations/                 ← Database migrations (only the seed exists right now)
+│   ├── config/database.ts           ← DataSource, manual DATABASE_URL parsing
+│   ├── routes/                      ← All Express routes
+│   ├── services/
+│   │   ├── AuthService.ts            ← JWT + reset tokens + change password
+│   │   ├── ChapterService.ts         ← canAccessChapter (admin bypass)
+│   │   ├── QuizService.ts            ← grading + tier-aware email fire-and-forget
+│   │   ├── PaymentService.ts         ← Stripe Checkout Session creation, webhook handlers
+│   │   ├── EmailService.ts           ← Postmark; sendQuizResultEmail picks 1 of 3 templates
+│   │   ├── AdminService.ts           ← students list/detail, analytics, chapter mgmt
+│   │   └── CertificateService.ts     ← HTML certificate generation + verification
+│   ├── models/                       ← TypeORM entities (source of truth for schema)
+│   ├── middleware/auth.ts            ← authMiddleware + requireRole (accepts string or string[])
+│   ├── scripts/
+│   │   ├── loadChapterContent.ts     ← docx → HTML + extracted images, re-runnable
+│   │   └── loadQuizQuestions.ts      ← question bank .txt → quizzes, re-runnable
+│   └── migrations/                   ← run automatically pre-deploy on DO
+│       ├── 1712700000000-SeedInitialData.ts            ← initial seed
+│       ├── 1776200000000-SetPassingScoreTo70.ts        ← Apr 14 fix
+│       └── 1776201000000-AlignChapterTitlesWithContent.ts ← Apr 14 fix
 
 frontend/
 ├── src/
-│   ├── api/
-│   │   ├── client.ts               ← axios instance + interceptors
-│   │   ├── token.ts                ← in-memory token holder
-│   │   ├── auth.ts                 ← login/register/logout/me
-│   │   ├── chapters.ts             ← chapter list
-│   │   └── students.ts             ← progress
-│   ├── store/
-│   │   └── auth.ts                 ← Zustand auth store
+│   ├── api/                          ← typed axios clients
+│   │   ├── client.ts                  ← shared axios w/ auto refresh on 401
+│   │   ├── token.ts                   ← in-memory token holder (access + refresh)
+│   │   ├── auth.ts, chapters.ts, quizzes.ts, students.ts,
+│   │   │   payments.ts, forum.ts, certificates.ts, admin.ts
+│   ├── store/auth.ts                 ← Zustand persist, pushes tokens to holder
 │   ├── components/
-│   │   ├── Header.tsx              ← top nav, auth-aware
-│   │   └── ProtectedRoute.tsx      ← auth wrapper
+│   │   ├── Header.tsx                ← role-aware nav (Forum, Enroll, Admin links)
+│   │   └── ProtectedRoute.tsx        ← supports requireRole prop
 │   ├── pages/
-│   │   ├── ChaptersPage.tsx        ← public catalog (cards are Links to /chapters/:id)
-│   │   ├── ChapterDetailPage.tsx   ← public; Mark Complete is auth-gated inside
-│   │   ├── LoginPage.tsx
-│   │   ├── RegisterPage.tsx
-│   │   └── DashboardPage.tsx       ← protected
-│   └── App.tsx                     ← React Router setup
-├── public/
-│   └── content/chapters/chN/       ← extracted chapter figures (committed to git, ~10MB total)
-└── tailwind.config.js              ← @tailwindcss/typography plugin enabled
+│   │   ├── ChaptersPage.tsx          ← landing + catalog
+│   │   ├── ChapterDetailPage.tsx     ← Vimeo + content + Mark Complete + Take Quiz gate
+│   │   ├── QuizPage.tsx              ← three-phase quiz UI
+│   │   ├── DashboardPage.tsx         ← progress + cert CTA
+│   │   ├── CheckoutPage.tsx, PaymentSuccessPage.tsx, PaymentCancelledPage.tsx
+│   │   ├── ForgotPasswordPage.tsx, ResetPasswordPage.tsx
+│   │   ├── ProfilePage.tsx
+│   │   ├── ForumPage.tsx, ForumPostPage.tsx
+│   │   ├── CertificatePage.tsx, VerifyCertificatePage.tsx
+│   │   ├── AdminPage.tsx             ← tab nav (Dashboard, Students, Chapters, Coupons)
+│   │   └── admin/
+│   │       ├── DashboardTab.tsx
+│   │       ├── StudentsTab.tsx       ← detail w/ payments, deactivate, refund
+│   │       ├── ChaptersTab.tsx
+│   │       └── CouponsTab.tsx
+│   └── App.tsx                       ← React Router
+└── public/content/chapters/chN/      ← extracted figures (committed)
 
-backend/src/scripts/
-└── loadChapterContent.ts           ← run via `npm run content:load` (see decision #10)
+.do/app.yaml                          ← exported app spec (secrets placeholdered)
 ```
 
 ---
 
-Last updated end of Mon Apr 11, 2026 PM session.
+## Resuming after context-window restart
+
+If a fresh Claude session needs to pick this up:
+
+1. Tell it: **"Pick up from MONDAY_PICKUP.md and `git log --oneline -30` on main."**
+2. Mention any specific area you want to work on; the doc is comprehensive but won't beat a focused goal.
+3. Verified-working features don't need re-explanation — trust the doc + commit messages.
+
+Last updated by Claude Opus 4.7 (1M context) on April 14, 2026.
