@@ -1,169 +1,143 @@
 # LMS Pickup Notes
 
-Status snapshot. Last updated **April 14, 2026** (Tuesday morning session).
+Status snapshot. Last updated **April 26, 2026** (end of session, just before context-window swap).
 
 ---
 
 ## TL;DR
 
-The Delaware Valley Drones LMS is **production-ready** at https://learn.delawarevalleydrones.com with:
+The Delaware Valley Drones LMS is **live in production** at https://learn.delawarevalleydrones.com.
 
-- 13 chapters of real Part 107 content (videos, written content, figures, quizzes)
-- 142 real practice questions distributed across chapters by topic
-- Stripe checkout at $99 (test mode — flip to live when ready)
-- Postmark email (production-approved): password resets, tier-aware quiz result emails
-- Admin console: dashboard, student management with payment history + deactivate/refund, chapter editing, coupon CRUD
-- Custom domain with SSL, pre-deploy migration job, app spec in git
+**As of today, ready for real paying students:**
+- **14 chapters** of real Part 107 content (13 content + ch14 practice exam) with embedded figures
+- **142 real practice questions** distributed across chapters by topic, **unlimited retakes**
+- **Stripe live mode** at $99 — verified end-to-end with a real card on Apr 26 (charge + refund both worked)
+- **Postmark production** — password reset, tier-aware quiz result emails, welcome email on enrollment, new-student admin notification
+- **Admin console** — dashboard, students with payment history + deactivate/refund, chapters with inline edit + Vimeo, coupons CRUD
+- **Custom domain** with SSL, pre-deploy migration job, app spec in git
 
-**Real students could register, pay, learn, take quizzes, and get certified today.** The remaining gaps are operational polish (Sentry error monitoring, more tests) and one open task: **end-to-end test pass against production with a real student account** before flipping Stripe to live mode.
+The system is genuinely ready to open to real students. **Only one open task before the next session:** see "Open todos" below.
 
 ---
 
-## Live URLs
+## Live URLs / IDs
 
 - **Student-facing:** https://learn.delawarevalleydrones.com
-- **Backup:** https://delaware-valley-drones-lms-app-u8wzb.ondigitalocean.app (still live, will continue working)
 - **GitHub:** https://github.com/jimgrasell/delaware-valley-drones-lms
-- **DO app:** cloud.digitalocean.com/apps/fe6b594d-7116-42d8-9f50-39a4f4fed6d9
+- **DO app id:** `fe6b594d-7116-42d8-9f50-39a4f4fed6d9`
+- **Project root on disk:** `/Users/forrest/claude-code/Part 107 Certification Course/delaware-valley-drones-lms`
 
 ## Seeded credentials
 
 - `admin@delawarevalleydrones.com` (admin)
 - `instructor@delawarevalleydrones.com` (instructor)
-- `student@example.com` (student) — passwords in your password manager
+- `student@example.com` (student)
+
+(Real passwords in James's password manager.)
 
 ---
 
-## What's built
-
-### Student experience
-- `/` — public landing page (hero with $99 pricing for visitors, chapter catalog for everyone)
-- `/register` — sign-up form, auto-redirects to `/checkout` after success
-- `/login`, `/forgot-password`, `/reset-password?token=…` — auth flow with Postmark password-reset emails
-- `/checkout` — coupon input, Stripe-hosted card capture, redirects to `/payment-success` on completion (webhook creates enrollment)
-- `/dashboard` — progress stats, "Continue where you left off", "Congratulations" banner + certificate link when course is complete
-- `/profile` — edit name/phone/bio + change password
-- `/chapters/:id` (auth-gated) — Vimeo video embed (when set) → written content → Mark Complete → Take Quiz button (gated on completion)
-- `/chapters/:chapterId/quiz` (auth-gated, requires chapter complete) — multiple-choice quiz, results screen with answer review
-- `/forum`, `/forum/:id` — community posts with replies (public reading, auth required to post)
-- `/certificate` — generate after completing all 13 chapters; HTML download + shareable verification link
-- `/verify/:verificationId` — public certificate verification (employer-friendly)
-
-### Admin console (`/admin`)
-- **Dashboard tab:** total/enrolled/completed students, completion rate, quiz stats, per-chapter engagement
-- **Students tab:** paginated list (name, email, progress %, avg score, joined date, active status) + click-to-expand detail with: account/enrollment dates, payment history (amount, date, coupon, Stripe refund button per payment), per-chapter progress with chapter numbers + titles, deactivate/reactivate buttons
-- **Chapters tab:** list all 13 chapters; inline edit form for title, description, Vimeo video ID
-- **Coupons tab:** create coupons (percentage or fixed-amount, usage limit), enable/disable toggle, delete
-
-### Backend
-- Express + TypeORM + Postgres on DO App Platform
-- JWT auth with **transparent token refresh on 401** (axios response interceptor calls `/auth/refresh` and retries the original request)
-- Stripe webhooks at `/api/v1/payments/webhook` — handles `checkout.session.completed` (enrollment creation) and `payment_intent.succeeded`/`payment_intent.payment_failed` (legacy)
-- Postmark email via `EmailService` — password reset, three-tier quiz result emails, welcome email scaffolded
-- Coupon CRUD + Stripe refund endpoints under `/api/v1/admin/`
-
-### Infrastructure
-- **Custom domain** `learn.delawarevalleydrones.com` with free Let's Encrypt SSL via DO
-- **Pre-deploy migration job** runs `npm run migrate:up` automatically before each deploy (uses raw `node -e ...` to bypass TypeORM CLI's strict export check)
-- **App spec exported** to `.do/app.yaml` (secrets replaced with placeholders)
-- **Branded SVG favicon**, `/api/health` route, Tailwind Typography plugin
-
----
-
-## Recent commits (Apr 13–14)
+## Recent commits (Apr 14 → Apr 26)
 
 ```
+430dc14  Remove the 3-attempt retake cap on quizzes
+ad45c5e  Send welcome email to student + new-enrollment notification to admin
+779cc6c  Loader prints a "commit the figures" reminder after each successful run
+c27d14f  Reload chapter figures to match Apr 26 content reload
+9f4c611  Add chapter 6 (Sectional Charts) + shift others to make 14 total
+9f44fa7  Rewrite MONDAY_PICKUP.md with Apr 13-14 work
 7f981e7  Remap quiz questions to match realigned chapter topics
 ed57319  Align chapter titles + descriptions with actual docx content
 9209494  Set quiz passingScore to 70 (FAA Part 107 standard)
 f46ccbc  Admin + quiz gating improvements
 fcf41e4  Send tier-aware email after every quiz attempt
 f06879d  Add coupon management to admin console
-3071ec7  Add backend smoke tests for utility functions (#16)
-7888a99  Fix pre-deploy migration: bypass TypeORM CLI export check
-afcc0ae  Add DO app spec as .do/app.yaml (#18)
-a3c988e  Add /api/health route + replace placeholder favicon
-9f1e1fb  Add transparent token refresh on 401
-89617a1  Add certificate generation, download, and public verification
-a9a18b7  Add community forum UI
-79ae1fa  Fix admin Students tab crash: match flat backend response shape
-585d865  Fix webhook: handle checkout.session.completed for enrollment
-7a84ffe  Redirect new registrations to /checkout + add Enroll button
-ff87f1e  Fix Stripe checkout: skip empty product images array
-1e248f2  Add Stripe checkout flow with $99 one-time payment
-89a9ac1  Gate chapter content behind auth + add landing hero section
-ed178a7  Add Vimeo video support to chapters
-6a81f5a  Add profile page with edit profile and change password
-c4d748b  Add admin console MVP with dashboard, students, and chapters tabs
-09b9cd6  Add forgot-password / reset-password flow
 ```
 
-(See `git log` for the full history back to the Apr 9–10 weekend session.)
+(`git log --oneline -50` for full history.)
 
 ---
 
-## Architecture decisions to remember
+## What changed since the prior pickup doc (Apr 14)
 
-1. **`DB_SYNCHRONIZE` is a one-shot env var.** Currently false. Never turn it back on permanently — TypeORM will reconcile schema against entities and can drop columns.
+### Curriculum restructure (Apr 14 night → Apr 26 morning)
 
-2. **`DATABASE_URL` is parsed manually** (not passed as a connection string to TypeORM) because `pg-connection-string` was upgrading `sslmode=require` to `verify-full`, which broke against DO's self-signed cert chain.
+**Instructor inserted a new Chapter 6 ("Reading and Understanding Sectional Charts") between airspace classification (ch5) and airspace operations (now ch7). Old chapters 6–13 shifted down by one. Practice exam is now ch14. Total = 14 chapters.**
 
-3. **In-memory token holder** (`frontend/src/api/token.ts`) holds both access and refresh tokens to break a circular dep between the auth store, the API client, and the response interceptor. The store pushes both tokens on login/logout/rehydrate.
+Implemented via:
+- Migration `AddChapter6AndShift1776300000000` — shifted DB rows in reverse order to dodge unique-index conflicts on chapterNumber, inserted new ch6 + its quiz, retitled all 14 chapters from docx headings, renamed quiz titles. Existing student progress preserved (UUIDs unchanged, only chapterNumber values shifted).
+- Loader scripts updated to target 1–14 (was 1–13).
+- Quiz topic mapping updated: Airspace area now spans ch5/ch6/ch7; mixed mixed bucket is ch1+ch14.
+- Content + quizzes reloaded against prod via `npm run content:load` + `npm run quiz:load`.
+- Chapter figures recommitted to `frontend/public/content/chapters/` after reload (52 new image files, 47 deletions). Static-site build now serves the right images.
 
-4. **Chapter content is HTML stored in the DB** rendered via `dangerouslySetInnerHTML` inside a Tailwind Typography `prose` container. Loaded by `backend/src/scripts/loadChapterContent.ts` which uses mammoth to convert docx→HTML and extracts embedded images to `frontend/public/content/chapters/chN/`. Re-runnable, idempotent.
+**Loader now prints a banner reminder** ("commit the figures") on every successful run so we don't repeat the broken-images mistake.
 
-5. **Quiz questions are loaded via `backend/src/scripts/loadQuizQuestions.ts`** from `Part_107_Practice_Questions_Bank.txt` (in the user's content folder, not in the repo). Maps the 5 FAA knowledge areas to the chapters whose content covers them. Re-running deletes existing questions+options for each quiz and reinserts.
+### Stripe live mode (Apr 26)
 
-6. **Both loader scripts use raw `pg.Client`** (not TypeORM) to sidestep the bcrypt native-binary fragility on the dev machine. They run locally, hitting prod DB after toggling Trusted Sources off temporarily.
+**Stripe activated and verified live on Apr 26.**
 
-7. **Admin/instructor bypass on access gates.** `ChapterService.canAccessChapter` (sequential progression) and `QuizService.getQuizQuestions` (chapter-must-be-complete) both bypass for admin/instructor roles so you can preview without going through the student flow.
+- Live mode webhook endpoint registered at `learn.delawarevalleydrones.com/api/v1/payments/webhook` listening for `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`.
+- Live env vars on DO:
+  - Backend: `STRIPE_SECRET_KEY` = `sk_live_…`, `STRIPE_WEBHOOK_SECRET` = `whsec_…` (live)
+  - Static-site: `VITE_STRIPE_PUBLIC_KEY` = `pk_live_…`
+- End-to-end smoke test: real-card $99 charge → enrollment created → admin refund → Stripe shows refunded.
 
-8. **DO Catchall Document = `index.html`** for the static site. Required for React Router on hard-loads. Set in dashboard; also documented in `.do/app.yaml`.
+### Welcome email + admin notification (Apr 26)
 
-9. **Quiz emails fire on every attempt.** Three tiers, picked by score against `passingScore`:
-   - `score < passingScore`: "Let's Review and Try Again" + study tips (tag: `quiz_failed`)
-   - `passingScore..79`: "Passed! But You Can Do Even Better" (tag: `quiz_passed_low`)
-   - `>= 80`: "Excellent Work! 🎯" (tag: `quiz_passed_high`)
+**Both fire from `handleCheckoutSessionCompleted` only when an enrollment is newly created** (no spam on webhook replays). Fire-and-forget.
 
-   Fire-and-forget — Postmark failure never breaks the grade response.
+- **Welcome email** (to student): updated content for current course shape — 14 chapters, 142 questions, current Ch1 title.
+- **Admin notification** (`sendNewStudentAdminNotification`): NEW. Sends to `ADMIN_NOTIFICATION_EMAIL` env var, falls back to `FROM_EMAIL`. Includes student name, email, amount paid, coupon code/discount, ET timestamp, deep link to admin console.
 
-10. **Webhook uses `checkout.session.completed`**, not `payment_intent.succeeded`. In current Stripe API versions, `session.payment_intent` is null at session creation, so the original PaymentIntent-matching logic returned 404. The session metadata carries `userId` directly.
+### Quiz retake cap removed (Apr 26)
 
-11. **Stripe is in test mode.** `sk_test_...` and `pk_test_...` keys. Test card `4242 4242 4242 4242`. Webhook endpoint registered for `checkout.session.completed` + `payment_intent.succeeded` + `payment_intent.payment_failed`. To go live: switch keys, register a new webhook endpoint with the live URL, update env vars.
+Migration `RemoveQuizRetakeLimit1777400000000` sets every quiz's `maxRetakes` to 0. Quiz model default also 0. Existing logic treats `maxRetakes <= 0` as "unlimited" so no service code change needed.
 
-12. **Postmark is production-approved.** Verified domain `delawarevalleydrones.com` (DKIM + Return-Path). Sends from `noreply@delawarevalleydrones.com`. Free tier is 100 emails/month — upgrade to $15/mo (10K emails) before ~20 active students.
+---
+
+## Architecture decisions (carried forward — still important)
+
+1. **`DB_SYNCHRONIZE` is one-shot.** Currently false. Never permanently true — TypeORM will reconcile schema and may drop columns.
+2. **`DATABASE_URL` parsed manually**, not passed as URL string to TypeORM. `pg-connection-string` upgrades `sslmode=require` → `verify-full`, which breaks against DO's self-signed cert chain.
+3. **In-memory token holder** (`frontend/src/api/token.ts`) holds both access + refresh tokens. Breaks circular dep between auth store / API client / response interceptor. Store pushes both tokens on login/logout/rehydrate.
+4. **Chapter content is HTML** stored in DB, rendered via `dangerouslySetInnerHTML` inside Tailwind Typography `prose` container. Loaded by `loadChapterContent.ts` (mammoth-based, idempotent).
+5. **Quiz questions** loaded via `loadQuizQuestions.ts` from `Part_107_Practice_Questions_Bank.txt`. Maps 5 FAA areas to chapters by topic. Idempotent (DELETE + INSERT per quiz).
+6. **Both loader scripts use raw `pg.Client`** to sidestep bcrypt native-binary fragility on the dev machine.
+7. **Admin/instructor bypass** on `canAccessChapter` (sequential progression) and `getQuizQuestions` (chapter-must-be-complete).
+8. **DO Catchall Document = `index.html`** for the static site. Required for React Router on hard-loads.
+9. **Quiz emails fire on every attempt.** Three tiers: `<passingScore` (failed), `passingScore..79` (passed-low), `>= 80` (passed-high). Fire-and-forget.
+10. **Webhook uses `checkout.session.completed`** (not `payment_intent.succeeded`). `session.payment_intent` is null at session creation in current Stripe API versions; metadata.userId is the source of truth.
+11. **Stripe is LIVE.** Test card `4242 4242…` no longer works. Real cards charge real money.
+12. **Postmark in production**, sender `noreply@delawarevalleydrones.com`. 100/month free tier — upgrade to $15/mo (10K) before ~15 active students.
+13. **Pre-deploy migration job** runs `npm run migrate:up` automatically before each deploy. Uses raw `node -e ...` (not TypeORM CLI) to dodge the strict-export check.
 
 ---
 
 ## Open todos
 
-### 🟢 Quick wins / hygiene
+### 🔴 In progress when context ran out
 
-- **End-to-end production test** with a real student account (jgrasell@gmail.com or similar). The full 10-test checklist is in chat history. Everything is wired up but no one has done a complete student-perspective run-through yet. Do this **before** flipping Stripe to live.
-- **#17: Sentry error monitoring** — only remaining item from the original pickup-doc todo list. Free tier (5K errors/month) is plenty. Setup is ~30 min: create account, two projects (lms-backend, lms-frontend), set DSNs as env vars, init in code.
-- Clean up test student accounts in production DB (any leftover `test@…` or fake-named accounts).
-- Verify the deactivate/refund flow with a real test payment+refund cycle.
+- **Add `ADMIN_NOTIFICATION_EMAIL` env var on DO backend.** Already pushed the code (`ad45c5e`); just need to add the env var so notifications go to your inbox instead of `noreply@`. Steps:
+  1. DO dashboard → Apps → app → Settings → click backend tile
+  2. Environment Variables → Edit
+  3. Add `ADMIN_NOTIFICATION_EMAIL` = `jim@delawarevalleydrones.com` (Run time scope)
+  4. Save (triggers redeploy)
 
-### 🟡 Pre-launch
+  Without this, admin notifications still fire — they just go to `noreply@delawarevalleydrones.com` which no one reads.
 
-- **Switch Stripe to live mode.** Steps:
-  1. Activate live mode in Stripe dashboard
-  2. Replace `STRIPE_SECRET_KEY` (`sk_test_…` → `sk_live_…`) on the DO backend env vars
-  3. Replace `VITE_STRIPE_PUBLIC_KEY` (`pk_test_…` → `pk_live_…`) on the DO static-site env vars
-  4. Create a new webhook endpoint pointing at `learn.delawarevalleydrones.com/api/v1/payments/webhook`, listening to the same three events
-  5. Replace `STRIPE_WEBHOOK_SECRET` with the new live signing secret
-  6. Test with a real card you control, then refund yourself
-- **Postmark plan upgrade** when student count grows. Currently 100/month free tier.
-- **Welcome email** — `EmailService.sendWelcomeEmail` exists but isn't called from the registration flow. Wire it into `POST /auth/register` if you want new students to get a welcome email.
+### 🟡 Pre-launch nice-to-haves
 
-### 🔵 Future enhancements
+- **One real-person soft-launch test.** Send a friend a 100% off coupon, have them register → checkout → take a quiz. They'll find UX issues you can't see anymore.
+- **Clean up the test student account** from Apr 26's live-card test. Refund cancelled their enrollment but the user row is still in production.
+- **Welcome email content review** — I rewrote it for 14ch/142q but you should eyeball it once it lands in your inbox to confirm wording feels right.
 
-- Quiz UI improvements: timer, question-by-question nav, save-and-resume
-- Forum: edit/delete UI for own posts (backend already supports), pinned/closed admin moderation UI
-- Certificate: actual PDF download (currently HTML — browser print-to-PDF works but isn't ideal). Could add `puppeteer` or similar.
-- Admin console: quiz CRUD (currently can only edit chapters; quiz questions are managed via the loader script)
-- Admin: bulk student actions (export to CSV, bulk email, etc.)
-- Tests: extend smoke tests to cover routes (currently only utility-function tests)
+### 🟢 Defer
+
+- **#17 Sentry error monitoring.** Free tier is fine; not blocking.
+- **Postmark plan upgrade** when student count crosses ~15.
+- **Admin: bulk student export to CSV**, pinned/closed forum moderation UI, certificate as PDF (currently HTML print-to-PDF).
+- **Welcome-email-on-registration vs on-payment.** Currently fires on payment (when enrollment is created). If you want users who register-but-don't-pay to get a "complete checkout" reminder, that's a separate email + flow.
 
 ---
 
@@ -173,86 +147,80 @@ c4d748b  Add admin console MVP with dashboard, students, and chapters tabs
 # Run backend tests
 cd backend && npm test
 
-# Reload chapter content from docx files (requires Trusted Sources off)
+# Reload chapter content from docx files (require Trusted Sources off)
 cd backend && DATABASE_URL='postgresql://...' npm run content:load
+# REMINDER: commit frontend/public/content/chapters/ after this!
 
-# Reload quiz questions from text bank (requires Trusted Sources off)
+# Reload quiz questions from text bank (require Trusted Sources off)
 cd backend && DATABASE_URL='postgresql://...' npm run quiz:load
 
 # Local dev
 cd frontend && npm run dev   # vite on :5173, hits prod API via VITE_API_URL
-cd backend && npm run dev    # ts-node-dev (bcrypt issue on this machine — runs in DO container)
-
-# Push DO app spec changes
-doctl apps update fe6b594d-7116-42d8-9f50-39a4f4fed6d9 --spec .do/app.yaml
+cd backend && npm run dev    # ts-node-dev (bcrypt fragile on this machine — runs in DO container)
 ```
 
 ## Useful repo paths
 
 ```
-backend/
-├── src/
-│   ├── config/database.ts           ← DataSource, manual DATABASE_URL parsing
-│   ├── routes/                      ← All Express routes
-│   ├── services/
-│   │   ├── AuthService.ts            ← JWT + reset tokens + change password
-│   │   ├── ChapterService.ts         ← canAccessChapter (admin bypass)
-│   │   ├── QuizService.ts            ← grading + tier-aware email fire-and-forget
-│   │   ├── PaymentService.ts         ← Stripe Checkout Session creation, webhook handlers
-│   │   ├── EmailService.ts           ← Postmark; sendQuizResultEmail picks 1 of 3 templates
-│   │   ├── AdminService.ts           ← students list/detail, analytics, chapter mgmt
-│   │   └── CertificateService.ts     ← HTML certificate generation + verification
-│   ├── models/                       ← TypeORM entities (source of truth for schema)
-│   ├── middleware/auth.ts            ← authMiddleware + requireRole (accepts string or string[])
-│   ├── scripts/
-│   │   ├── loadChapterContent.ts     ← docx → HTML + extracted images, re-runnable
-│   │   └── loadQuizQuestions.ts      ← question bank .txt → quizzes, re-runnable
-│   └── migrations/                   ← run automatically pre-deploy on DO
-│       ├── 1712700000000-SeedInitialData.ts            ← initial seed
-│       ├── 1776200000000-SetPassingScoreTo70.ts        ← Apr 14 fix
-│       └── 1776201000000-AlignChapterTitlesWithContent.ts ← Apr 14 fix
+backend/src/
+  config/database.ts         ← DataSource, manual DATABASE_URL parsing
+  routes/                    ← admin.ts, auth.ts, chapters.ts, payments.ts,
+                                quizzes.ts, students.ts, forum.ts, certificates.ts
+  services/
+    AuthService.ts            ← JWT + reset tokens + change password
+    ChapterService.ts         ← canAccessChapter (admin bypass)
+    QuizService.ts            ← grading + tier emails (fire-and-forget)
+    PaymentService.ts         ← Checkout Session + webhook handlers + welcome
+                                  & admin-notify emails on enrollment
+    EmailService.ts           ← Postmark; sendQuizResultEmail picks 1 of 3
+                                  templates; sendNewStudentAdminNotification
+    AdminService.ts           ← students list/detail (incl. payments),
+                                  analytics, chapter mgmt
+    CertificateService.ts     ← HTML certificate generation + verification
+  models/                    ← TypeORM entities
+  middleware/auth.ts         ← authMiddleware + requireRole(string|string[])
+  scripts/
+    loadChapterContent.ts     ← docx → HTML + extract figures, idempotent.
+                                  Prints "commit the figures" reminder on success.
+    loadQuizQuestions.ts      ← question bank .txt → quizzes, idempotent
+  migrations/
+    1712700000000-SeedInitialData.ts
+    1776200000000-SetPassingScoreTo70.ts
+    1776201000000-AlignChapterTitlesWithContent.ts
+    1776300000000-AddChapter6AndShift.ts          ← Apr 14
+    1777400000000-RemoveQuizRetakeLimit.ts        ← Apr 26
 
-frontend/
-├── src/
-│   ├── api/                          ← typed axios clients
-│   │   ├── client.ts                  ← shared axios w/ auto refresh on 401
-│   │   ├── token.ts                   ← in-memory token holder (access + refresh)
-│   │   ├── auth.ts, chapters.ts, quizzes.ts, students.ts,
-│   │   │   payments.ts, forum.ts, certificates.ts, admin.ts
-│   ├── store/auth.ts                 ← Zustand persist, pushes tokens to holder
-│   ├── components/
-│   │   ├── Header.tsx                ← role-aware nav (Forum, Enroll, Admin links)
-│   │   └── ProtectedRoute.tsx        ← supports requireRole prop
-│   ├── pages/
-│   │   ├── ChaptersPage.tsx          ← landing + catalog
-│   │   ├── ChapterDetailPage.tsx     ← Vimeo + content + Mark Complete + Take Quiz gate
-│   │   ├── QuizPage.tsx              ← three-phase quiz UI
-│   │   ├── DashboardPage.tsx         ← progress + cert CTA
-│   │   ├── CheckoutPage.tsx, PaymentSuccessPage.tsx, PaymentCancelledPage.tsx
-│   │   ├── ForgotPasswordPage.tsx, ResetPasswordPage.tsx
-│   │   ├── ProfilePage.tsx
-│   │   ├── ForumPage.tsx, ForumPostPage.tsx
-│   │   ├── CertificatePage.tsx, VerifyCertificatePage.tsx
-│   │   ├── AdminPage.tsx             ← tab nav (Dashboard, Students, Chapters, Coupons)
-│   │   └── admin/
-│   │       ├── DashboardTab.tsx
-│   │       ├── StudentsTab.tsx       ← detail w/ payments, deactivate, refund
-│   │       ├── ChaptersTab.tsx
-│   │       └── CouponsTab.tsx
-│   └── App.tsx                       ← React Router
-└── public/content/chapters/chN/      ← extracted figures (committed)
+frontend/src/
+  api/                       ← typed axios clients (auth, chapters, quizzes,
+                                payments, forum, certificates, admin)
+  store/auth.ts              ← Zustand persist, pushes tokens to in-memory holder
+  pages/
+    ChaptersPage.tsx         ← landing + catalog
+    ChapterDetailPage.tsx    ← Vimeo + content + Mark Complete + Take Quiz gate
+    QuizPage.tsx             ← three-phase quiz UI
+    DashboardPage.tsx, ProfilePage.tsx
+    CheckoutPage.tsx, PaymentSuccessPage.tsx, PaymentCancelledPage.tsx
+    ForgotPasswordPage.tsx, ResetPasswordPage.tsx
+    ForumPage.tsx, ForumPostPage.tsx
+    CertificatePage.tsx, VerifyCertificatePage.tsx
+    AdminPage.tsx + admin/*  ← Dashboard, Students, Chapters, Coupons tabs
+  App.tsx                    ← React Router
+public/content/chapters/chN/ ← extracted figures (committed; reload via loader)
 
-.do/app.yaml                          ← exported app spec (secrets placeholdered)
+.do/app.yaml                 ← exported app spec (secrets placeholdered)
 ```
 
 ---
 
 ## Resuming after context-window restart
 
-If a fresh Claude session needs to pick this up:
+Tell the new session:
 
-1. Tell it: **"Pick up from MONDAY_PICKUP.md and `git log --oneline -30` on main."**
-2. Mention any specific area you want to work on; the doc is comprehensive but won't beat a focused goal.
-3. Verified-working features don't need re-explanation — trust the doc + commit messages.
+> "Pick up the LMS work from MONDAY_PICKUP.md and `git log --oneline -25` on main.
+> The current open task is adding the `ADMIN_NOTIFICATION_EMAIL` env var on
+> the DO backend component. After that, the system is fully production-ready
+> and the next priorities are listed under 'Open todos' in the doc."
 
-Last updated by Claude Opus 4.7 (1M context) on April 14, 2026.
+The new session should be able to start immediately from there. Don't re-explain features that the doc + commit messages cover — they're comprehensive enough.
+
+Last updated by Claude Opus 4.7 (1M context) on April 26, 2026.
