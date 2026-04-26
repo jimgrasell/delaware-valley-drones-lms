@@ -371,6 +371,27 @@ async function main() {
     await client.end();
   }
 
+  // Reminder: image files were written under frontend/public/content/chapters/.
+  // Production serves images from the static-site build, which only ships
+  // committed files. If you skip this commit, the DB will reference image
+  // paths that don't exist on production and every chapter will render
+  // broken-link icons.
+  if (!args.dryRun && succeeded > 0) {
+    console.log('');
+    console.log('━'.repeat(72));
+    console.log('  ⚠  IMPORTANT: chapter figures were written to:');
+    console.log(`     ${args.imageDir}`);
+    console.log('');
+    console.log('     COMMIT and PUSH them now, otherwise production will show');
+    console.log('     broken-link icons until the static site rebuilds with the');
+    console.log('     new images. Run from the repo root:');
+    console.log('');
+    console.log('       git add -A frontend/public/content/');
+    console.log('       git commit -m "Reload chapter figures"');
+    console.log('       git push');
+    console.log('━'.repeat(72));
+  }
+
   process.exit(failed > 0 ? 1 : 0);
 }
 
