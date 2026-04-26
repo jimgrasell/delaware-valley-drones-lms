@@ -51,37 +51,89 @@ export class EmailService {
   }
 
   /**
-   * Send welcome email to new student
+   * Send welcome email to a newly-enrolled student.
+   * Fires from the Stripe webhook handler after enrollment is created.
    */
   async sendWelcomeEmail(email: string, name: string): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'https://learn.delawarevalleydrones.com';
     const htmlBody = `
       <h2>Welcome to the FAA Part 107 Remote Pilot Certification Course!</h2>
       <p>Hi ${name},</p>
-      <p>Thank you for enrolling in our comprehensive online course. You now have lifetime access to:</p>
+      <p>Thank you for enrolling. You now have lifetime access to:</p>
       <ul>
-        <li>13 structured course chapters with video lessons</li>
-        <li>113+ quiz questions with instant feedback</li>
-        <li>Interactive discussions in our community forum</li>
-        <li>Certificate of completion upon successful graduation</li>
+        <li>14 chapters of expert instruction with video lectures and study materials</li>
+        <li>142 real Part 107 practice questions with instant feedback and explanations</li>
+        <li>A full-length practice exam to simulate the real FAA test</li>
+        <li>A shareable certificate of completion when you finish the course</li>
+        <li>The community forum to ask questions and connect with other students</li>
       </ul>
-      <p><strong>Getting Started:</strong></p>
+      <p><strong>Getting started:</strong></p>
       <ol>
-        <li>Log in to your account at <a href="${process.env.FRONTEND_URL}">DelawareValleyDrones.com</a></li>
-        <li>Start with Chapter 1: Introduction to UAS and Remote Pilot Regulations</li>
-        <li>Watch the video lessons, review course materials, and take the chapter quizzes</li>
-        <li>Complete all chapters and pass the final assessment to earn your certificate</li>
+        <li>Sign in to your account at <a href="${frontendUrl}">learn.delawarevalleydrones.com</a></li>
+        <li>Begin with Chapter 1: Welcome to the Part 107 Certification Journey</li>
+        <li>Read each chapter, mark it complete, and take the quiz</li>
+        <li>Aim for 80%+ on each chapter quiz — that's the level that correlates with passing the FAA exam on the first try</li>
+        <li>Finish with Chapter 14 (Practice Exam 1) to simulate test conditions before you go in</li>
       </ol>
-      <p>Questions? Visit our <a href="${process.env.FRONTEND_URL}/forum">Community Forum</a> to ask questions and interact with other students.</p>
-      <p>Best regards,<br/>James Grasell<br/>UAS Remote Pilot Certified<br/>Delaware Valley Drones</p>
+      <p>Questions? Reach out anytime at <a href="mailto:jim@delawarevalleydrones.com">jim@delawarevalleydrones.com</a> or post in the <a href="${frontendUrl}/forum">community forum</a>.</p>
+      <p>Best of luck on your certification journey.</p>
+      <p>—<br/>James Grasell<br/>FAA-Certified Remote Pilot<br/>Delaware Valley Drones</p>
     `;
 
     await this.sendEmail({
       to: email,
-      subject: 'Welcome to the FAA Part 107 Remote Pilot Certification Course',
+      subject: 'Welcome to the FAA Part 107 Course — let\'s get you certified',
       htmlBody,
       tag: 'welcome',
       metadata: {
         category: 'welcome_email',
+      },
+    });
+  }
+
+  /**
+   * Notify the course admin (you) that a new student has just enrolled.
+   * Recipient is configured via ADMIN_NOTIFICATION_EMAIL env var, falling
+   * back to FROM_EMAIL if unset.
+   */
+  async sendNewStudentAdminNotification(opts: {
+    studentName: string;
+    studentEmail: string;
+    amountCents: number;
+    couponCode?: string | null;
+    discountCents?: number;
+  }): Promise<void> {
+    const recipient = process.env.ADMIN_NOTIFICATION_EMAIL || this.fromEmail;
+    const frontendUrl = process.env.FRONTEND_URL || 'https://learn.delawarevalleydrones.com';
+    const amountStr = `$${(opts.amountCents / 100).toFixed(2)}`;
+    const couponLine = opts.couponCode
+      ? `<li><strong>Coupon used:</strong> ${opts.couponCode}${
+          opts.discountCents ? ` (−$${(opts.discountCents / 100).toFixed(2)} off)` : ''
+        }</li>`
+      : '';
+
+    const htmlBody = `
+      <h2>New student enrolled</h2>
+      <p>Heads up — a new student just paid and was enrolled in the Part 107 course:</p>
+      <ul>
+        <li><strong>Name:</strong> ${opts.studentName}</li>
+        <li><strong>Email:</strong> ${opts.studentEmail}</li>
+        <li><strong>Amount paid:</strong> ${amountStr}</li>
+        ${couponLine}
+        <li><strong>When:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET</li>
+      </ul>
+      <p>View their account in the <a href="${frontendUrl}/admin#students">admin console</a>.</p>
+      <p>—<br/>Delaware Valley Drones LMS</p>
+    `;
+
+    await this.sendEmail({
+      to: recipient,
+      subject: `New enrollment: ${opts.studentName} (${amountStr})`,
+      htmlBody,
+      tag: 'admin_new_student',
+      metadata: {
+        category: 'admin_notification',
+        studentEmail: opts.studentEmail,
       },
     });
   }

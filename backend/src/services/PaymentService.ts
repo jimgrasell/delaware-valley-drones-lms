@@ -5,6 +5,7 @@ import { Coupon, CouponType } from '../models/Coupon';
 import { Enrollment, EnrollmentStatus } from '../models/Enrollment';
 import { User } from '../models/User';
 import { AppError } from '../middleware/errorHandler';
+import { emailService } from './EmailService';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16' as any,
@@ -192,7 +193,49 @@ export class PaymentService {
       });
       await this.enrollmentRepository.save(enrollment);
       console.log(`Webhook: enrollment created for user ${userId}`);
+
+      // Fire welcome email to the student + admin notification.
+      // Fire-and-forget: a Postmark hiccup must never break the
+      // webhook ack. Only fires on NEWLY-created enrollments so a
+      // replayed webhook doesn't re-spam.
+      this.sendEnrollmentEmailsFireAndForget(userId);
     }
+  }
+
+  /**
+   * Fire-and-forget welcome email + admin notification after a new
+   * enrollment is created. Loads the user for name/email and the
+   * latest payment for amount/coupon details.
+   */
+  private sendEnrollmentEmailsFireAndForget(userId: string): void {
+    (async () => {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) return;
+
+      // Welcome email to the student
+      await emailService
+        .sendWelcomeEmail(user.email, user.firstName)
+        .catch((err) => console.error('Welcome email failed:', err));
+
+      // Admin notification — pull the most recent completed payment
+      // for amount + coupon details.
+      const payment = await this.paymentRepository.findOne({
+        where: { userId, status: PaymentStatus.COMPLETED },
+        order: { completedAt: 'DESC' },
+      });
+
+      await emailService
+        .sendNewStudentAdminNotification({
+          studentName: user.name,
+          studentEmail: user.email,
+          amountCents: payment?.amount ?? 0,
+          couponCode: payment?.couponCode || null,
+          discountCents: payment?.discountAmount || 0,
+        })
+        .catch((err) => console.error('Admin notification email failed:', err));
+    })().catch((err) => {
+      console.error('Enrollment email helper failed:', err);
+    });
   }
 
   /**
