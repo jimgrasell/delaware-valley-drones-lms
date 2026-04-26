@@ -40,7 +40,9 @@ export class Quiz {
   @Column({ type: 'boolean', default: true })
   allowRetakes: boolean;
 
-  @Column({ type: 'integer', default: 3 })
+  // 0 = unlimited. The retake-limit check in QuizService treats
+  // values > 0 as a hard cap; 0 lets students retake forever.
+  @Column({ type: 'integer', default: 0 })
   maxRetakes: number;
 
   @Column({ type: 'boolean', default: true })
