@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part 107 — Chart-Dependent Quiz Verification</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .qtext { white-space: pre-wrap; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen py-8">
+  <div id="root" class="max-w-3xl mx-auto px-4"></div>
+
+  <script>
+    // ---------------------------------------------------------------------
+    // 25 chart-dependent questions, lifted verbatim from
+    // Part_107_Practice_Questions_Bank.txt. Figure refs cross-referenced
+    // against jrupprechtlaw.com's UAG-72 set + Chegg/CourseHero excerpts.
+    // ---------------------------------------------------------------------
+    const QUESTIONS = [
+      {
+        number: "Q14",
+        title: "Maximum Altitude Above Structure",
+        figureRef: "FAA-CT-8080-2H, Figure 78 (near center)",
+        confidence: "high",
+        text: "You have been contracted to inspect towers located approximately 4NM southwest of the Sioux Gateway (SUX) airport. What is the maximum altitude above ground level (AGL) that you are authorized to operate over the top of the towers?",
+        options: { A: "400 feet AGL", B: "402 feet AGL", C: "802 feet AGL" },
+        correct: "C",
+        explanation: "14 CFR §107.51(b) caps altitude at 400 ft AGL, but allows 400 ft above a structure when the sUAS is within a 400 ft horizontal radius of it. 802 ft = tower height (402 ft) + 400 ft."
+      },
+      {
+        number: "Q31",
+        title: "Class B Floor — Dallas Executive (RBD)",
+        figureRef: "FAA-CT-8080-2H, Figure 25, Area 3",
+        confidence: "high",
+        text: "The floor of Class B airspace at Dallas Executive (RBD) is:",
+        options: { A: "At the surface", B: "3,100 feet MSL", C: "3,000 feet MSL" },
+        correct: "C",
+        explanation: "Sectional charts show Class B airspace floors. Dallas Executive's Class B shelf floor is at 3,000 feet MSL. Always refer to current sectional charts for specific airspace boundaries."
+      },
+      {
+        number: "Q32",
+        title: "Class C Shelf Floor — Savannah",
+        figureRef: "FAA-CT-8080-2H, Figure 23, Area 3",
+        confidence: "high",
+        text: "What is the floor of the Savannah Class C airspace at the shelf area (outer circle)?",
+        options: { A: "1,300 feet AGL", B: "1,300 feet MSL", C: "1,700 feet MSL" },
+        correct: "B",
+        explanation: "Class C airspace typically has a 5-mile inner circle and 10-mile outer shelf. Savannah's shelf floor is 1,300 feet MSL."
+      },
+      {
+        number: "Q34",
+        title: "Pueblo Airport Classification",
+        figureRef: "FAA-CT-8080-2H, Figure 26, Area 4 (figure number inferred)",
+        confidence: "medium",
+        text: "What type of airport is Pueblo Airport?",
+        options: { A: "Class B", B: "Class C", C: "Class D" },
+        correct: "C",
+        explanation: "Pueblo Memorial Airport (PUB) is a Class D airport with a control tower. Class D airspace surrounds towered airports not meeting Class B or C criteria."
+      },
+      {
+        number: "Q35",
+        title: "Fentress NALF (NFE) Airspace",
+        figureRef: "FAA-CT-8080-2H, Figure 20, Area 1",
+        confidence: "high",
+        text: "The Fentress NALF Airport (NFE) is in what type of airspace?",
+        options: { A: "Class C", B: "Class B", C: "Class E (indicated by dashed magenta line)" },
+        correct: "C",
+        explanation: "Dashed magenta lines on sectional charts indicate Class E airspace at the surface. Fentress is in Class E airspace."
+      },
+      {
+        number: "Q36",
+        title: "Military Training Routes",
+        figureRef: "FAA-CT-8080-2H, Figure 59, Area 2",
+        confidence: "high",
+        text: "The chart shows a gray line with \"VR1667, VR1617, VR1638, and VR1668.\" Could this area present a hazard to the operations of a small UA?",
+        options: {
+          A: "No, all operations above 400 feet",
+          B: "Route provides traffic separation",
+          C: "Yes, this is a Military Training Route from 1,500 feet AGL"
+        },
+        correct: "C",
+        explanation: "Military Training Routes (gray lines with \"VR\" designation) present hazards. 4-digit VR identifiers indicate at least one segment of the route is above 1,500 feet AGL. Military aircraft operate at low altitudes along these routes."
+      },
+      {
+        number: "Q37",
+        title: "Restricted Airspace R-2305 Information",
+        figureRef: "FAA-CT-8080-2H, Figure 75, Area 6",
+        confidence: "high",
+        text: "During preflight planning, you plan to operate in R-2305. Where would you find additional information regarding this airspace?",
+        options: {
+          A: "In Aeronautical Information Manual",
+          B: "Special Use Airspace area of chart",
+          C: "In the Charts Supplements U.S."
+        },
+        correct: "C",
+        explanation: "The Chart Supplements U.S. (formerly Airport Facility Directory) provides detailed information about restricted areas, MOAs, and other special use airspace.",
+        note: "Note: this answer is FAA-published but defensible alternates exist (the Special Use Airspace box on the sectional margin and AIM Ch 3 also cover SUA)."
+      },
+      {
+        number: "Q38",
+        title: "Devil's Lake West MOA Activity Status",
+        figureRef: "FAA-CT-8080-2H, Figure 21 (east of Area 2)",
+        confidence: "high",
+        text: "You have been hired by a farmer to use your small UA to inspect his crops. The area you are to survey is in the Devil's Lake West MOA, east of area 2. How would you find out if the MOA is active?",
+        options: {
+          A: "Refer to chart legend phone number",
+          B: "Information in Small UAS database",
+          C: "Check NOTAMs at https://www.notams.faa.gov, call 1-800-WX-BRIEF, or contact ARTCC"
+        },
+        correct: "C",
+        explanation: "MOA activity status is published in NOTAMs. You must check current NOTAMs to determine if a MOA is active before flying in or near it."
+      },
+      {
+        number: "Q39",
+        title: "National Security Area Indicator",
+        figureRef: "FAA-CT-8080-2H, Figure 26 (Pueblo area, area number inferred)",
+        confidence: "medium",
+        text: "What is the dashed magenta line in a circle east of the Pueblo Airport represent?",
+        options: { A: "Class E at surface", B: "Isogonic line", C: "This is a national security area" },
+        correct: "C",
+        explanation: "Dashed magenta circles on sectional charts can indicate National Security Areas (NSAs) when labeled. Flight restrictions apply in NSAs, particularly near government facilities. Verify by checking the area's text label on the chart."
+      },
+      {
+        number: "Q40",
+        title: "Indianapolis 500 TFR Compliance",
+        figureRef: "Text-only — no figure",
+        confidence: "n/a",
+        text: "Your surveying company is a title sponsor for a race team at the Indianapolis 500. To promote your new aerial surveying department, you decide to video part of the race using a small UA. The FAA has issued a Temporary Flight Restriction (TFR) for the race in the area you plan to fly. In this situation:",
+        options: {
+          A: "May fly since company sponsoring team",
+          B: "Flying allowed if notify non-participants",
+          C: "The TFR applies to all aircraft; you may not fly in the area without a Certificate of Waiver or Authorization"
+        },
+        correct: "C",
+        explanation: "TFRs are mandatory restrictions. No exception exists for sponsors or involved parties. A Certificate of Waiver must be obtained to fly in a TFR area."
+      },
+      {
+        number: "Q41",
+        title: "Required Flight Visibility — Plantation Airport",
+        figureRef: "FAA-CT-8080-2H, Figure 23, Area 4",
+        confidence: "high",
+        text: "What is the required flight visibility for a remote pilot operating an unmanned aircraft near the Plantation Airport (JYL)?",
+        options: { A: "5 statute miles", B: "1 statute mile", C: "3 statute miles" },
+        correct: "C",
+        explanation: "14 CFR §107.51(c) requires 3 statute miles of flight visibility for Part 107 operations. This is a mandatory operational minimum regardless of airport location."
+      },
+      {
+        number: "Q42",
+        title: "VFR Check Point at Lake Drummond",
+        figureRef: "FAA-CT-8080-2H, Figure 20, Area 2",
+        confidence: "high",
+        text: "Why would the small flag at Lake Drummond of the sectional chart be important to a remote pilot?",
+        options: {
+          A: "GPS check point",
+          B: "Indicates obstruction on next chart",
+          C: "This is a VFR check point for manned aircraft, and a higher volume of air traffic should be expected there"
+        },
+        correct: "C",
+        explanation: "VFR check points are used by manned aircraft for navigation and position reporting. sUAS pilots should expect increased manned aircraft traffic near these landmarks."
+      },
+      {
+        number: "Q44",
+        title: "Hold Short Markings at Class D Airport",
+        figureRef: "Text-only — no figure",
+        confidence: "n/a",
+        text: "During an aerial survey of a Class D airport, ATC instructs you to remain clear of all runways. How do you confirm you are safely clear?",
+        options: {
+          A: "You are on the side of the hold short line with two solid yellow lines",
+          B: "You can see the entire runway",
+          C: "You are 100 feet from the runway"
+        },
+        correct: "A",
+        explanation: "Hold short lines on the airfield consist of double solid yellow lines on the holding side and dashed lines on the runway side. You are clear of the runway when on the solid line side."
+      },
+      {
+        number: "Q49",
+        title: "Runway Clear Markings",
+        figureRef: "Text-only — no figure",
+        confidence: "n/a",
+        text: "You have received authorization to operate an sUAS at an airport. When flying the sUAS, the ATC tower instructs you to stay clear of all runways. Which situation would indicate that you are complying with this request?",
+        options: {
+          A: "You are on the double solid yellow line side of markings near the runway",
+          B: "You are within 100 feet of the runway",
+          C: "You are using anti-collision lights"
+        },
+        correct: "A",
+        explanation: "The double solid yellow line marks the mandatory holding area. Being on this side of the line means you are clear of the runway."
+      },
+      {
+        number: "Q81",
+        title: "Pattern Position from CTAF Call",
+        figureRef: "FAA-CT-8080-2H, Figure 26, Area 2",
+        confidence: "high",
+        text: "While monitoring the Cooperstown CTAF you hear an aircraft announce that they are \"midfield left downwind to RWY 13.\" Where would the aircraft be relative to the runway?",
+        options: { A: "West", B: "East", C: "North" },
+        correct: "B",
+        explanation: "Runway 13 = 130° magnetic heading (roughly southeast). In a left traffic pattern for RWY 13, the downwind leg is on the northeast side of the runway centerline — east is the closest of the three options."
+      },
+      {
+        number: "Q83",
+        title: "Airport Identification by Coordinates",
+        figureRef: "FAA-CT-8080-2H, Figure 21",
+        confidence: "high",
+        text: "What airport is located approximately 47° 40' N latitude and 101° 26' W longitude?",
+        options: { A: "Mercer County Regional Airport", B: "Garrison Airport", C: "Semshenko Airport" },
+        correct: "B",
+        explanation: "Using sectional chart coordinates to identify airports is an important navigation skill. Practice reading latitude/longitude on sectional charts."
+      },
+      {
+        number: "Q84",
+        title: "CTAF at Coeur D'Alene",
+        figureRef: "FAA-CT-8080-2H, Figure 22, Area 2",
+        confidence: "high",
+        text: "At Coeur D'Alene which frequency should be used as a Common Traffic Advisory Frequency (CTAF) to monitor airport traffic?",
+        options: { A: "122.05 MHz", B: "122.8 MHz", C: "135.075 MHz" },
+        correct: "B",
+        explanation: "CTAF frequencies are published on sectional charts and in the Chart Supplements U.S. Always use the correct frequency for each airport."
+      },
+      {
+        number: "Q85",
+        title: "Highest Obstacle Near Hertford",
+        figureRef: "FAA-CT-8080-2H, Figure 20, Area 4",
+        confidence: "high",
+        text: "A small UA is being launched 2 NM northeast of the town of Hertford. What is the height of the highest obstacle?",
+        options: { A: "399 feet MSL", B: "500 feet MSL", C: "500 feet AGL" },
+        correct: "C",
+        explanation: "Obstacle heights on sectional charts are shown in feet AGL (smaller number) and feet MSL (larger number)."
+      },
+      {
+        number: "Q86",
+        title: "Tower Inspection Near Jamestown",
+        figureRef: "FAA-CT-8080-2H, Figure 26, Area 4",
+        confidence: "high",
+        text: "You have been hired to inspect the tower under construction at 46.9N and 98.6W, near Jamestown Regional (JMS). What must you receive prior to flying your unmanned aircraft in this area?",
+        options: { A: "Authorization from military", B: "National Park Service", C: "Authorization from ATC" },
+        correct: "C",
+        explanation: "Jamestown Regional has Class E airspace at the surface (indicated by dashed magenta lines). Per §107.41, ATC authorization is required for any operation in Class E at the surface."
+      },
+      {
+        number: "Q87",
+        title: "Parachute Operations Information Source",
+        figureRef: "FAA-CT-8080-2H, Figure 24, Area 3",
+        confidence: "high",
+        text: "For information about the parachute operations at Tri-County Airport, refer to:",
+        options: { A: "Notes on chart border", B: "NOTAM publication", C: "Chart Supplements U.S." },
+        correct: "C",
+        explanation: "The Chart Supplements U.S. contains detailed information about airport facilities, activities, and special operations including parachute jumping areas."
+      },
+      {
+        number: "Q88",
+        title: "Sioux Gateway Airspace Class",
+        figureRef: "FAA-CT-8080-2H, Figure 78 (near center)",
+        confidence: "high",
+        text: "What class of airspace is associated with SIOUX GATEWAY/COL DAY (SUX) Airport?",
+        options: { A: "Class C", B: "Class B", C: "Class D airspace" },
+        correct: "C",
+        explanation: "Blue dashed lines on sectional charts indicate Class D airspace. Sioux Gateway is a towered airport in Class D airspace."
+      },
+      {
+        number: "Q89",
+        title: "Card Airport Type",
+        figureRef: "FAA-CT-8080-2H, Figure 24, Area 6",
+        confidence: "high",
+        text: "What type of airport is Card Airport?",
+        options: { A: "Public towered", B: "Public non-towered", C: "Private non-towered" },
+        correct: "C",
+        explanation: "Magenta colors indicate non-towered airports. The \"R\" symbol indicates private ownership/restricted access. This is a private non-towered airport."
+      },
+      {
+        number: "Q90",
+        title: "Balloon Hazard Near Elizabeth City",
+        figureRef: "FAA-CT-8080-2H, Figure 20, Area 3",
+        confidence: "high",
+        text: "With ATC authorization, you are operating your small unmanned aircraft approximately 4 SM southeast of Elizabeth City Regional Airport (ECG). What hazard is indicated to be in that area?",
+        options: {
+          A: "High density military operations",
+          B: "Balloon up to 3,008 feet AGL",
+          C: "Unmarked balloon on a cable up to 3,008 feet MSL"
+        },
+        correct: "C",
+        explanation: "Balloon symbols on sectional charts show altitude in MSL (not AGL). This represents a cable-tethered balloon hazard that must be avoided."
+      },
+      {
+        number: "Q91",
+        title: "Latitude Line Definition",
+        figureRef: "FAA-CT-8080-2H, Figure 26, Area 4 (figure inferred)",
+        confidence: "medium",
+        text: "What does the line of latitude at area 4 measure?",
+        options: {
+          A: "East/west of Prime Meridian",
+          B: "East/west from Greenwich",
+          C: "The degrees of latitude north and south from the equator"
+        },
+        correct: "C",
+        explanation: "Latitude lines run east-west and measure distance north and south from the equator (0° to 90° N or S). Longitude lines run north-south and measure E/W from the Prime Meridian."
+      },
+      {
+        number: "Q92",
+        title: "Most Comprehensive Airport Information",
+        figureRef: "Text-only — no figure",
+        confidence: "n/a",
+        text: "The most comprehensive information on a given airport is provided by:",
+        options: {
+          A: "Notices to Airmen (NOTAMs)",
+          B: "Terminal Area Chart (TAC)",
+          C: "The Chart Supplements U.S. (formerly Airport Facility Directory)"
+        },
+        correct: "C",
+        explanation: "The Chart Supplements U.S. provides complete airport information including frequencies, hours, services, runways, and special notes. It's the authoritative airport reference."
+      }
+    ];
+
+    // ---------------------------------------------------------------------
+    // State + render
+    // ---------------------------------------------------------------------
+    let state = { idx: 0, selected: null, submitted: false, answers: [] };
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[c]);
+    }
+
+    function confidenceBadge(conf) {
+      if (conf === "high")   return '<span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">high confidence</span>';
+      if (conf === "medium") return '<span class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800">medium confidence — figure inferred</span>';
+      return '<span class="text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-700">no figure needed</span>';
+    }
+
+    function render() {
+      const root = document.getElementById("root");
+      if (state.idx >= QUESTIONS.length) return renderSummary(root);
+
+      const q = QUESTIONS[state.idx];
+      const pct = (state.idx / QUESTIONS.length) * 100;
+
+      const optionsHtml = ["A", "B", "C"].map(letter => {
+        const opt = q.options[letter];
+        const isSelected = state.selected === letter;
+        const isCorrect = q.correct === letter;
+        let cls = "block border rounded-lg p-3 cursor-pointer transition";
+        if (state.submitted) {
+          if (isCorrect) cls += " border-emerald-500 bg-emerald-50";
+          else if (isSelected) cls += " border-rose-500 bg-rose-50";
+          else cls += " border-slate-200 opacity-60";
+        } else {
+          cls += isSelected ? " border-indigo-500 bg-indigo-50" : " border-slate-200 hover:bg-slate-50";
+        }
+        return `
+          <label class="${cls}">
+            <input type="radio" name="opt" value="${letter}" ${isSelected ? "checked" : ""} ${state.submitted ? "disabled" : ""} class="mr-2 align-middle" onchange="selectOption('${letter}')" />
+            <span class="font-mono text-sm mr-2">${letter})</span><span class="align-middle">${escapeHtml(opt)}</span>
+          </label>
+        `;
+      }).join("");
+
+      const feedbackHtml = state.submitted ? `
+        <div class="mt-5 p-4 ${state.selected === q.correct ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"} border rounded-lg">
+          <p class="font-semibold ${state.selected === q.correct ? "text-emerald-900" : "text-rose-900"}">
+            ${state.selected === q.correct ? "✓ Correct" : "✗ Incorrect — correct answer: " + q.correct}
+          </p>
+          <p class="text-slate-700 text-sm mt-2">${escapeHtml(q.explanation)}</p>
+          ${q.note ? `<p class="text-amber-800 text-sm mt-2 italic">${escapeHtml(q.note)}</p>` : ""}
+        </div>
+      ` : "";
+
+      const buttonsHtml = state.submitted ? `
+        <button onclick="next()" class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+          ${state.idx === QUESTIONS.length - 1 ? "See results →" : "Next →"}
+        </button>
+      ` : `
+        <button onclick="submitAnswer()" ${state.selected ? "" : "disabled"} class="px-5 py-2 bg-indigo-600 text-white rounded-lg disabled:bg-slate-300 hover:bg-indigo-700">Submit</button>
+      `;
+
+      root.innerHTML = `
+        <header class="mb-6">
+          <h1 class="text-2xl font-bold">Part 107 — Chart-Dependent Quiz Verification</h1>
+          <p class="text-sm text-slate-600 mt-1">Question ${state.idx + 1} of ${QUESTIONS.length}</p>
+          <div class="w-full bg-slate-200 rounded h-2 mt-2">
+            <div class="bg-indigo-600 h-2 rounded transition-all" style="width: ${pct}%"></div>
+          </div>
+        </header>
+        <article class="bg-white shadow rounded-lg p-6">
+          <div class="flex flex-wrap gap-2 mb-3 items-center">
+            <span class="font-mono text-xs bg-slate-200 text-slate-800 px-2 py-1 rounded">${q.number}</span>
+            <span class="font-mono text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">${escapeHtml(q.figureRef)}</span>
+            ${confidenceBadge(q.confidence)}
+          </div>
+          <h2 class="text-lg font-semibold mb-3">${escapeHtml(q.title)}</h2>
+          <p class="text-slate-700 mb-4 qtext">${escapeHtml(q.text)}</p>
+          <div class="space-y-2">${optionsHtml}</div>
+          ${feedbackHtml}
+          <div class="mt-5 flex justify-between items-center">
+            <button onclick="skip()" class="text-sm text-slate-500 hover:text-slate-700">${state.submitted ? "" : "Skip →"}</button>
+            <div>${buttonsHtml}</div>
+          </div>
+        </article>
+        <footer class="mt-6 text-center text-xs text-slate-500">
+          Open <a href="https://www.faa.gov/training_testing/testing/supplements" target="_blank" class="underline">FAA-CT-8080-2H</a> in another tab to reference figures.
+        </footer>
+      `;
+    }
+
+    function renderSummary(root) {
+      const correct = state.answers.filter(a => a.isCorrect).length;
+      const skipped = QUESTIONS.length - state.answers.length;
+      const wrong = state.answers.filter(a => !a.isCorrect);
+      const pct = Math.round((correct / QUESTIONS.length) * 100);
+      const tone = pct >= 84 ? "text-emerald-600" : pct >= 68 ? "text-amber-600" : "text-rose-600";
+
+      const wrongHtml = wrong.length > 0 ? `
+        <h3 class="font-semibold mb-3 mt-6">Disagreements (${wrong.length}):</h3>
+        <ul class="space-y-3">
+          ${wrong.map(a => {
+            const q = QUESTIONS.find(qq => qq.number === a.qNum);
+            return `
+              <li class="text-sm border-l-4 border-rose-400 pl-3 py-2 bg-rose-50 rounded-r">
+                <div><span class="font-mono">${q.number}</span> · ${escapeHtml(q.title)}</div>
+                <div class="text-slate-600 text-xs mt-1">${escapeHtml(q.figureRef)}</div>
+                <div class="mt-1">Your answer: <span class="font-mono">${a.selected}</span> · Bank says: <span class="font-mono">${a.correct}</span></div>
+              </li>
+            `;
+          }).join("")}
+        </ul>
+      ` : `<p class="text-emerald-700 text-center mt-4">No disagreements — bank answers match your reading of the charts.</p>`;
+
+      root.innerHTML = `
+        <header class="mb-6">
+          <h1 class="text-2xl font-bold">Verification complete</h1>
+        </header>
+        <article class="bg-white shadow rounded-lg p-6">
+          <div class="text-center mb-4">
+            <p class="text-5xl font-bold ${tone}">${correct} / ${QUESTIONS.length}</p>
+            <p class="text-slate-600 mt-2">${pct}% agreement with the question bank</p>
+            ${skipped > 0 ? `<p class="text-xs text-slate-500 mt-1">(${skipped} skipped)</p>` : ""}
+          </div>
+          ${wrongHtml}
+          <div class="mt-6 text-center">
+            <button onclick="restart()" class="px-5 py-2 border rounded-lg hover:bg-slate-50">Restart</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function selectOption(letter) {
+      if (state.submitted) return;
+      state.selected = letter;
+      render();
+    }
+
+    function submitAnswer() {
+      if (!state.selected) return;
+      const q = QUESTIONS[state.idx];
+      state.submitted = true;
+      state.answers.push({
+        qNum: q.number,
+        selected: state.selected,
+        correct: q.correct,
+        isCorrect: state.selected === q.correct
+      });
+      render();
+    }
+
+    function skip() {
+      if (state.submitted) return;
+      state.idx += 1;
+      state.selected = null;
+      state.submitted = false;
+      render();
+    }
+
+    function next() {
+      state.idx += 1;
+      state.selected = null;
+      state.submitted = false;
+      render();
+    }
+
+    function restart() {
+      state = { idx: 0, selected: null, submitted: false, answers: [] };
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>
