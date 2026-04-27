@@ -90,6 +90,7 @@ export class QuizService {
       questionText: question.questionText,
       type: question.type,
       points: question.points,
+      figureRef: question.figureRef ?? null,
       options: (question.options || []).map((option) => ({
         id: option.id,
         optionText: option.optionText,
@@ -332,6 +333,7 @@ export class QuizService {
     const detailedAnswers = answers.map((answer) => ({
       questionId: answer.questionId,
       questionText: answer.question.questionText,
+      figureRef: answer.question.figureRef ?? null,
       selectedOptionId: answer.selectedOptionId,
       answerText: answer.answerText,
       isCorrect: answer.isCorrect,

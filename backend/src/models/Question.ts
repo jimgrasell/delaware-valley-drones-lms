@@ -38,6 +38,9 @@ export class Question {
   @Column({ nullable: true })
   explanation?: string;
 
+  @Column({ type: 'text', nullable: true })
+  figureRef?: string | null;
+
   @Column({ type: 'integer', default: 1 })
   points: number;
 

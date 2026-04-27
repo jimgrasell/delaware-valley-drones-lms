@@ -27,6 +27,7 @@ export interface QuizQuestion {
   questionText: string;
   type: string;
   points: number;
+  figureRef: string | null;
   options: QuizOption[];
 }
 
@@ -61,6 +62,7 @@ export interface QuizResult {
 export interface AnswerReview {
   questionId: string;
   questionText: string;
+  figureRef: string | null;
   selectedOptionId: string | null;
   answerText: string | null;
   isCorrect: boolean;

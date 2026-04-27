@@ -34,6 +34,7 @@ interface ParsedQuestion {
   number: number;
   title: string;
   acsCode: string;
+  figureRef: string | null; // optional FAA-CT-8080-2H supplement reference
   questionText: string;
   options: ParsedOption[];
   explanation: string;
@@ -114,6 +115,13 @@ function parseQuestionBank(filePath: string): ParsedQuestion[] {
         i++;
       }
 
+      // Optional Figure line (chart-dependent questions only)
+      let figureRef: string | null = null;
+      if (i < lines.length && lines[i].startsWith('Figure:')) {
+        figureRef = lines[i].replace('Figure:', '').trim();
+        i++;
+      }
+
       // Question text: everything until we hit an option line (A), B), C))
       const questionLines: string[] = [];
       while (i < lines.length && !isOptionLine(lines[i])) {
@@ -170,6 +178,7 @@ function parseQuestionBank(filePath: string): ParsedQuestion[] {
         number: qNum,
         title,
         acsCode,
+        figureRef,
         questionText,
         options,
         explanation: explanationLines.join(' ').trim(),
@@ -381,6 +390,12 @@ async function main() {
     console.log(`  Text: ${sample.questionText.slice(0, 80)}...`);
     console.log(`  Options: ${sample.options.map(o => `${o.isCorrect ? '✓' : ' '} ${o.text.slice(0, 50)}`).join(' | ')}`);
     console.log(`  Explanation: ${sample.explanation.slice(0, 80)}...`);
+
+    const withFigure = questions.filter(q => q.figureRef);
+    console.log(`\n${withFigure.length} chart-dependent questions with figure refs:`);
+    for (const q of withFigure) {
+      console.log(`  Q${q.number}: ${q.figureRef}`);
+    }
     console.log('\nDry run complete — no DB changes.');
     process.exit(0);
   }
@@ -430,10 +445,10 @@ async function main() {
         const q = chQuestions[qi];
 
         const qInsert = await client.query(
-          `INSERT INTO questions ("quizId", "questionText", type, explanation, points, "order")
-           VALUES ($1, $2, 'multiple_choice', $3, 1, $4)
+          `INSERT INTO questions ("quizId", "questionText", type, explanation, "figureRef", points, "order")
+           VALUES ($1, $2, 'multiple_choice', $3, $4, 1, $5)
            RETURNING id`,
-          [quizId, q.questionText, q.explanation, qi]
+          [quizId, q.questionText, q.explanation, q.figureRef, qi]
         );
         const questionId = qInsert.rows[0].id as string;
 

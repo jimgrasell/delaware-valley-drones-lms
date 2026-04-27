@@ -189,13 +189,64 @@ function IntroPhase({ quiz, onStart }: { quiz: QuizMeta; onStart: (id: string) =
         )}
       </div>
 
+      <SupplementBanner />
+
       <button
         type="button"
         onClick={() => onStart(quiz.id)}
-        className="mt-8 rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow transition hover:bg-brand-light"
+        className="mt-6 rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow transition hover:bg-brand-light"
       >
         Start quiz
       </button>
+    </div>
+  );
+}
+
+/**
+ * Inline chip rendered above a question when it references a figure
+ * in the FAA-CT-8080-2H supplement. Links straight to the supplements
+ * page so the student can pull up the right chart in one click.
+ */
+function FigureChip({ figureRef }: { figureRef: string }) {
+  return (
+    <a
+      href="https://www.faa.gov/training_testing/testing/supplements"
+      target="_blank"
+      rel="noreferrer"
+      className="mb-3 inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-900 transition hover:bg-sky-100"
+      title="Open the FAA-CT-8080-2H supplement in a new tab"
+    >
+      <span aria-hidden="true">📖</span>
+      <span>Refer to {figureRef}</span>
+    </a>
+  );
+}
+
+/**
+ * Some Part 107 questions reference figures in the FAA's Airman Knowledge
+ * Testing Supplement (FAA-CT-8080-2H) — sectional chart excerpts you need
+ * to read to answer the question. Show a banner on the intro and taking
+ * phases so students know to have the supplement open.
+ */
+function SupplementBanner() {
+  return (
+    <div className="mt-6 rounded-md border border-sky-200 bg-sky-50 p-4 text-left">
+      <p className="text-sm font-medium text-sky-900">
+        Some questions reference sectional chart figures
+      </p>
+      <p className="mt-1 text-xs text-sky-800">
+        These questions show a "Figure" chip with the chart and area to look up.
+        Open the FAA's Airman Knowledge Testing Supplement{' '}
+        <a
+          href="https://www.faa.gov/training_testing/testing/supplements"
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium underline hover:text-sky-700"
+        >
+          FAA-CT-8080-2H
+        </a>{' '}
+        in another tab — it's the same booklet handed out at the testing center.
+      </p>
     </div>
   );
 }
@@ -272,6 +323,7 @@ function TakingPhase({
             <p className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2">
               Question {idx + 1}
             </p>
+            {q.figureRef && <FigureChip figureRef={q.figureRef} />}
             <p className="text-sm font-medium text-slate-900 mb-4">{q.questionText}</p>
 
             <div className="space-y-2">
@@ -486,7 +538,10 @@ function ReviewPhase({
               >
                 {idx + 1}
               </span>
-              <p className="text-sm font-medium text-slate-900">{ans.questionText}</p>
+              <div className="flex-1">
+                {ans.figureRef && <FigureChip figureRef={ans.figureRef} />}
+                <p className="text-sm font-medium text-slate-900">{ans.questionText}</p>
+              </div>
             </div>
 
             {/* Student's answer */}
